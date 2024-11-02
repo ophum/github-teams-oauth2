@@ -1,0 +1,19 @@
+{{define "select-group"}}
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>github teams oauth2: select group</title>
+</head>
+<h1>github teams oauth2: select group</h1>
+
+<p>{{ .User.Name }}でログインしています。</p>
+{{ range .Groups }}
+<form action="/oauth2/authorize" method="POST">
+    <input type="hidden" name="group" value="{{ . }}">
+    <button type="submit">{{ . }}</button>
+</form>
+{{ end }}
+
+</html>
+{{end}}

@@ -1,0 +1,13 @@
+services:
+  postgres:
+    image: postgres:latest
+    ports:
+      - 127.0.0.1:5432:5432
+    volumes:
+      - data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+
+volumes:
+  data:
