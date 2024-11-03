@@ -4,16 +4,16 @@ Copyright © 2024 Takahiro INAGAKI <inagaki0106@gmail.com>
 package cmd
 
 import (
-	"log"
+	"context"
+	"fmt"
 
-	"github.com/ophum/github-teams-oauth2/internal/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
-// serverCmd represents the server command
-var serverCmd = &cobra.Command{
-	Use:   "server",
+// migrateCmd represents the migrate command
+var migrateCmd = &cobra.Command{
+	Use:   "migrate",
 	Short: "A brief description of your command",
 	Long: `A longer description that spans multiple lines and likely contains examples
 and usage of using your command. For example:
@@ -25,30 +25,30 @@ to quickly create a Cobra application.`,
 		return viper.Unmarshal(&conf)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		s, err := server.New(&conf)
+		db, err := conf.Database.Open()
 		if err != nil {
 			return err
 		}
-		defer func() {
-			if err := s.Shutdown(); err != nil {
-				log.Fatal(err)
-			}
-		}()
-		return s.Run()
+		defer db.Close()
+
+		if err := db.Schema.Create(context.Background()); err != nil {
+			return err
+		}
+		fmt.Println("migrated")
+		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(serverCmd)
+	rootCmd.AddCommand(migrateCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// serverCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// migrateCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// serverCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
+	// migrateCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
