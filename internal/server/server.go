@@ -22,6 +22,7 @@ import (
 	"github.com/ophum/github-teams-oauth2/ent/user"
 	"github.com/ophum/github-teams-oauth2/internal/config"
 	"golang.org/x/oauth2"
+	"gopkg.in/boj/redistore.v1"
 )
 
 func init() {
@@ -38,6 +39,7 @@ func (t *Template) Render(w io.Writer, name string, data any, c echo.Context) er
 
 type Server struct {
 	db           *ent.Client
+	sessionStore *redistore.RediStore
 	oauth2Config *oauth2.Config
 }
 
@@ -46,15 +48,26 @@ func New(conf *config.Config) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	store, err := conf.Session.Redis.Open()
+	if err != nil {
+		return nil, err
+	}
 
 	return &Server{
 		db:           db,
+		sessionStore: store,
 		oauth2Config: conf.Github.OAuth2Config(),
 	}, nil
 }
 
 func (s *Server) Shutdown() error {
-	return s.db.Close()
+	if err := s.db.Close(); err != nil {
+		return err
+	}
+	if err := s.sessionStore.Close(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *Server) Run() error {
@@ -66,7 +79,7 @@ func (s *Server) Run() error {
 	e.Renderer = t
 	e.Use(middleware.Logger())
 
-	withSession := e.Group("", session.Middleware(sessions.NewCookieStore([]byte("secret"))))
+	withSession := e.Group("", session.Middleware(s.sessionStore))
 	withSession.GET("/oauth2/authorize", s.getOauth2AuthorizeHandle)
 	withSession.POST("/oauth2/authorize", s.postOauth2AuthorizeHandle)
 	withSession.GET("/oauth2/github/callback", s.getOauth2GithubCallbackHandle)
