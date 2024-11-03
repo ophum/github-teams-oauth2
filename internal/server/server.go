@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -91,6 +92,7 @@ func (s *Server) Run() error {
 	withSession.GET("/oauth2/github/callback", s.getOauth2GithubCallbackHandle)
 
 	e.POST("/oauth2/token", s.postOauth2TokenHandle)
+	e.GET("/userinfo", s.getUserinfoHandle)
 
 	e.Logger.Fatal(e.Start(":8080"))
 	return nil
@@ -417,5 +419,38 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		"token_type":    "bearer",
 		"expires_in":    3600,
 		"refresh_token": "",
+	})
+}
+
+func (s *Server) getUserinfoHandle(ctx echo.Context) error {
+	authzHeader := ctx.Request().Header.Get("Authorization")
+	token, ok := strings.CutPrefix(authzHeader, "Bearer ")
+	if !ok {
+		token, ok = strings.CutPrefix(authzHeader, "bearer ")
+		if !ok {
+			return echo.ErrUnauthorized
+		}
+	}
+
+	accessToken, err := s.db.AccessToken.Query().
+		Where(accesstoken.Token(token)).
+		First(ctx.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	user, err := accessToken.QueryUser().First(ctx.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	group, err := accessToken.QueryGroup().First(ctx.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]any{
+		"username": user.Name,
+		"groups":   []string{group.Name},
 	})
 }

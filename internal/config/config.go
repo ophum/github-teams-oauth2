@@ -39,10 +39,18 @@ func (g Github) OAuth2Config() *oauth2.Config {
 type Database struct {
 	Type       string `yaml:"type"`
 	DataSource string `yaml:"dataSource"`
+	IsDebug    bool   `yaml:"isDebug"`
 }
 
 func (d *Database) Open() (*ent.Client, error) {
-	return ent.Open(d.Type, d.DataSource)
+	db, err := ent.Open(d.Type, d.DataSource)
+	if err != nil {
+		return nil, err
+	}
+	if d.IsDebug {
+		db = db.Debug()
+	}
+	return db, nil
 }
 
 type Session struct {
