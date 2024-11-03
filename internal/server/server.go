@@ -79,7 +79,11 @@ func (s *Server) Run() error {
 	e.Renderer = t
 	e.Use(middleware.Logger())
 
-	withSession := e.Group("", session.Middleware(s.sessionStore))
+	withSession := e.Group("",
+		session.Middleware(s.sessionStore),
+		middleware.CSRFWithConfig(middleware.CSRFConfig{
+			TokenLookup: "form:_csrf",
+		}))
 	withSession.GET("/oauth2/authorize", s.getOauth2AuthorizeHandle)
 	withSession.POST("/oauth2/authorize", s.postOauth2AuthorizeHandle)
 	withSession.GET("/oauth2/github/callback", s.getOauth2GithubCallbackHandle)
@@ -132,9 +136,16 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	for _, group := range groups {
 		g = append(g, group.Name)
 	}
+
+	token, ok := ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string)
+	if !ok {
+		return errors.New("failed to get csrf token from context")
+	}
+
 	return ctx.Render(http.StatusOK, "select-group", map[string]any{
-		"User":   user,
-		"Groups": g,
+		"User":      user,
+		"Groups":    g,
+		"CSRFToken": token,
 	})
 }
 
