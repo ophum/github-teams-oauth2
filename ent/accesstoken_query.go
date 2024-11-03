@@ -11,8 +11,11 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
+	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/predicate"
+	"github.com/ophum/github-teams-oauth2/ent/user"
 )
 
 // AccessTokenQuery is the builder for querying AccessToken entities.
@@ -22,6 +25,9 @@ type AccessTokenQuery struct {
 	order      []accesstoken.OrderOption
 	inters     []Interceptor
 	predicates []predicate.AccessToken
+	withUser   *UserQuery
+	withGroup  *GroupQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -58,6 +64,50 @@ func (atq *AccessTokenQuery) Order(o ...accesstoken.OrderOption) *AccessTokenQue
 	return atq
 }
 
+// QueryUser chains the current query on the "user" edge.
+func (atq *AccessTokenQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: atq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := atq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := atq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(accesstoken.Table, accesstoken.FieldID, selector),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, accesstoken.UserTable, accesstoken.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGroup chains the current query on the "group" edge.
+func (atq *AccessTokenQuery) QueryGroup() *GroupQuery {
+	query := (&GroupClient{config: atq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := atq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := atq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(accesstoken.Table, accesstoken.FieldID, selector),
+			sqlgraph.To(group.Table, group.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, accesstoken.GroupTable, accesstoken.GroupColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(atq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first AccessToken entity from the query.
 // Returns a *NotFoundError when no AccessToken was found.
 func (atq *AccessTokenQuery) First(ctx context.Context) (*AccessToken, error) {
@@ -82,8 +132,8 @@ func (atq *AccessTokenQuery) FirstX(ctx context.Context) *AccessToken {
 
 // FirstID returns the first AccessToken ID from the query.
 // Returns a *NotFoundError when no AccessToken ID was found.
-func (atq *AccessTokenQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (atq *AccessTokenQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = atq.Limit(1).IDs(setContextOp(ctx, atq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
@@ -95,7 +145,7 @@ func (atq *AccessTokenQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (atq *AccessTokenQuery) FirstIDX(ctx context.Context) int {
+func (atq *AccessTokenQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := atq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -133,8 +183,8 @@ func (atq *AccessTokenQuery) OnlyX(ctx context.Context) *AccessToken {
 // OnlyID is like Only, but returns the only AccessToken ID in the query.
 // Returns a *NotSingularError when more than one AccessToken ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (atq *AccessTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (atq *AccessTokenQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = atq.Limit(2).IDs(setContextOp(ctx, atq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
@@ -150,7 +200,7 @@ func (atq *AccessTokenQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (atq *AccessTokenQuery) OnlyIDX(ctx context.Context) int {
+func (atq *AccessTokenQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := atq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -178,7 +228,7 @@ func (atq *AccessTokenQuery) AllX(ctx context.Context) []*AccessToken {
 }
 
 // IDs executes the query and returns a list of AccessToken IDs.
-func (atq *AccessTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
+func (atq *AccessTokenQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if atq.ctx.Unique == nil && atq.path != nil {
 		atq.Unique(true)
 	}
@@ -190,7 +240,7 @@ func (atq *AccessTokenQuery) IDs(ctx context.Context) (ids []int, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (atq *AccessTokenQuery) IDsX(ctx context.Context) []int {
+func (atq *AccessTokenQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := atq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -250,14 +300,50 @@ func (atq *AccessTokenQuery) Clone() *AccessTokenQuery {
 		order:      append([]accesstoken.OrderOption{}, atq.order...),
 		inters:     append([]Interceptor{}, atq.inters...),
 		predicates: append([]predicate.AccessToken{}, atq.predicates...),
+		withUser:   atq.withUser.Clone(),
+		withGroup:  atq.withGroup.Clone(),
 		// clone intermediate query.
 		sql:  atq.sql.Clone(),
 		path: atq.path,
 	}
 }
 
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AccessTokenQuery) WithUser(opts ...func(*UserQuery)) *AccessTokenQuery {
+	query := (&UserClient{config: atq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	atq.withUser = query
+	return atq
+}
+
+// WithGroup tells the query-builder to eager-load the nodes that are connected to
+// the "group" edge. The optional arguments are used to configure the query builder of the edge.
+func (atq *AccessTokenQuery) WithGroup(opts ...func(*GroupQuery)) *AccessTokenQuery {
+	query := (&GroupClient{config: atq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	atq.withGroup = query
+	return atq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		Token string `json:"token,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.AccessToken.Query().
+//		GroupBy(accesstoken.FieldToken).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (atq *AccessTokenQuery) GroupBy(field string, fields ...string) *AccessTokenGroupBy {
 	atq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &AccessTokenGroupBy{build: atq}
@@ -269,6 +355,16 @@ func (atq *AccessTokenQuery) GroupBy(field string, fields ...string) *AccessToke
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		Token string `json:"token,omitempty"`
+//	}
+//
+//	client.AccessToken.Query().
+//		Select(accesstoken.FieldToken).
+//		Scan(ctx, &v)
 func (atq *AccessTokenQuery) Select(fields ...string) *AccessTokenSelect {
 	atq.ctx.Fields = append(atq.ctx.Fields, fields...)
 	sbuild := &AccessTokenSelect{AccessTokenQuery: atq}
@@ -310,15 +406,27 @@ func (atq *AccessTokenQuery) prepareQuery(ctx context.Context) error {
 
 func (atq *AccessTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*AccessToken, error) {
 	var (
-		nodes = []*AccessToken{}
-		_spec = atq.querySpec()
+		nodes       = []*AccessToken{}
+		withFKs     = atq.withFKs
+		_spec       = atq.querySpec()
+		loadedTypes = [2]bool{
+			atq.withUser != nil,
+			atq.withGroup != nil,
+		}
 	)
+	if atq.withUser != nil || atq.withGroup != nil {
+		withFKs = true
+	}
+	if withFKs {
+		_spec.Node.Columns = append(_spec.Node.Columns, accesstoken.ForeignKeys...)
+	}
 	_spec.ScanValues = func(columns []string) ([]any, error) {
 		return (*AccessToken).scanValues(nil, columns)
 	}
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &AccessToken{config: atq.config}
 		nodes = append(nodes, node)
+		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -330,7 +438,84 @@ func (atq *AccessTokenQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
+	if query := atq.withUser; query != nil {
+		if err := atq.loadUser(ctx, query, nodes, nil,
+			func(n *AccessToken, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := atq.withGroup; query != nil {
+		if err := atq.loadGroup(ctx, query, nodes, nil,
+			func(n *AccessToken, e *Group) { n.Edges.Group = e }); err != nil {
+			return nil, err
+		}
+	}
 	return nodes, nil
+}
+
+func (atq *AccessTokenQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*AccessToken, init func(*AccessToken), assign func(*AccessToken, *User)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AccessToken)
+	for i := range nodes {
+		if nodes[i].user_access_tokens == nil {
+			continue
+		}
+		fk := *nodes[i].user_access_tokens
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(user.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "user_access_tokens" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (atq *AccessTokenQuery) loadGroup(ctx context.Context, query *GroupQuery, nodes []*AccessToken, init func(*AccessToken), assign func(*AccessToken, *Group)) error {
+	ids := make([]uuid.UUID, 0, len(nodes))
+	nodeids := make(map[uuid.UUID][]*AccessToken)
+	for i := range nodes {
+		if nodes[i].group_access_tokens == nil {
+			continue
+		}
+		fk := *nodes[i].group_access_tokens
+		if _, ok := nodeids[fk]; !ok {
+			ids = append(ids, fk)
+		}
+		nodeids[fk] = append(nodeids[fk], nodes[i])
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+	query.Where(group.IDIn(ids...))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nodeids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected foreign-key "group_access_tokens" returned %v`, n.ID)
+		}
+		for i := range nodes {
+			assign(nodes[i], n)
+		}
+	}
+	return nil
 }
 
 func (atq *AccessTokenQuery) sqlCount(ctx context.Context) (int, error) {
@@ -343,7 +528,7 @@ func (atq *AccessTokenQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (atq *AccessTokenQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(accesstoken.Table, accesstoken.Columns, sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeInt))
+	_spec := sqlgraph.NewQuerySpec(accesstoken.Table, accesstoken.Columns, sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID))
 	_spec.From = atq.sql
 	if unique := atq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique

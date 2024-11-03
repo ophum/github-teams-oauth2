@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
@@ -17,6 +18,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/ophum/github-teams-oauth2/ent"
+	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
 	"github.com/ophum/github-teams-oauth2/ent/code"
 	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/user"
@@ -88,6 +90,8 @@ func (s *Server) Run() error {
 	withSession.POST("/oauth2/authorize", s.postOauth2AuthorizeHandle)
 	withSession.GET("/oauth2/github/callback", s.getOauth2GithubCallbackHandle)
 
+	e.POST("/oauth2/token", s.postOauth2TokenHandle)
+
 	e.Logger.Fatal(e.Start(":8080"))
 	return nil
 }
@@ -116,7 +120,11 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	if req.ClientID != "test-client-id" {
 		return errors.New("invalid client_id'")
 	}
+	sess.Values["client_id"] = req.ClientID
 	sess.Values["state"] = req.State
+	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
+		return err
+	}
 
 	userID, ok := sess.Values["user_id"].(string)
 	if !ok {
@@ -192,6 +200,11 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("state not found")
 	}
 
+	clientID, ok := sess.Values["client_id"].(string)
+	if !ok {
+		return errors.New("client_id not found'")
+	}
+
 	userID := sess.Values["user_id"].(string)
 	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
 	if err != nil {
@@ -226,6 +239,8 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 			SetGroupID(group.ID).
 			SetUserID(user.ID).
 			SetCode(c).
+			SetExpiresAt(time.Now().Add(time.Minute)).
+			SetClientID(clientID).
 			Save(ctx.Request().Context()); err != nil {
 			return err
 		}
@@ -326,4 +341,81 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 	}
 
 	return ctx.Redirect(http.StatusSeeOther, sessionState["return"])
+}
+
+func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
+	var req struct {
+		GrantType   string `form:"grant_type"`
+		Code        string `form:"code"`
+		RedirectURI string `form:"redirect_uri"`
+		ClientID    string `form:"client_id"`
+	}
+	if err := ctx.Bind(&req); err != nil {
+		return err
+	}
+
+	if req.GrantType != "authorization_code" {
+		return errors.New("invalid grant_type")
+	}
+
+	code, err := s.db.Code.Query().Where(code.Code(req.Code)).First(ctx.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	if code.ClientID != req.ClientID {
+		return errors.New("invalid client_id")
+	}
+
+	if code.RedirectURI != "" && code.RedirectURI == req.RedirectURI {
+		return errors.New("invalid redirect_uri")
+	}
+
+	if code.ExpiresAt.Before(time.Now()) {
+		return errors.New("code expired")
+	}
+
+	user, err := code.QueryUser().First(ctx.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	group, err := code.QueryGroup().First(ctx.Request().Context())
+	if err != nil {
+		return err
+	}
+
+	var token *ent.AccessToken
+	for {
+		t, err := randomString(20)
+		if err != nil {
+			return err
+		}
+
+		if exists, err := s.db.AccessToken.Query().
+			Where(accesstoken.Token(t)).
+			Exist(ctx.Request().Context()); err != nil {
+			return err
+		} else if exists {
+			continue
+		}
+
+		token, err = s.db.AccessToken.Create().
+			SetToken(t).
+			SetExpiresAt(time.Now().Add(time.Hour)).
+			SetUserID(user.ID).
+			SetGroupID(group.ID).
+			Save(ctx.Request().Context())
+		if err != nil {
+			return err
+		}
+		break
+	}
+
+	return ctx.JSON(http.StatusOK, map[string]any{
+		"access_token":  token.Token,
+		"token_type":    "bearer",
+		"expires_in":    3600,
+		"refresh_token": "",
+	})
 }

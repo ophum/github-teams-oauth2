@@ -6,11 +6,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
+	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
+	"github.com/ophum/github-teams-oauth2/ent/group"
+	"github.com/ophum/github-teams-oauth2/ent/user"
 )
 
 // AccessTokenCreate is the builder for creating a AccessToken entity.
@@ -21,6 +26,70 @@ type AccessTokenCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetToken sets the "token" field.
+func (atc *AccessTokenCreate) SetToken(s string) *AccessTokenCreate {
+	atc.mutation.SetToken(s)
+	return atc
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (atc *AccessTokenCreate) SetExpiresAt(t time.Time) *AccessTokenCreate {
+	atc.mutation.SetExpiresAt(t)
+	return atc
+}
+
+// SetID sets the "id" field.
+func (atc *AccessTokenCreate) SetID(u uuid.UUID) *AccessTokenCreate {
+	atc.mutation.SetID(u)
+	return atc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (atc *AccessTokenCreate) SetNillableID(u *uuid.UUID) *AccessTokenCreate {
+	if u != nil {
+		atc.SetID(*u)
+	}
+	return atc
+}
+
+// SetUserID sets the "user" edge to the User entity by ID.
+func (atc *AccessTokenCreate) SetUserID(id uuid.UUID) *AccessTokenCreate {
+	atc.mutation.SetUserID(id)
+	return atc
+}
+
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (atc *AccessTokenCreate) SetNillableUserID(id *uuid.UUID) *AccessTokenCreate {
+	if id != nil {
+		atc = atc.SetUserID(*id)
+	}
+	return atc
+}
+
+// SetUser sets the "user" edge to the User entity.
+func (atc *AccessTokenCreate) SetUser(u *User) *AccessTokenCreate {
+	return atc.SetUserID(u.ID)
+}
+
+// SetGroupID sets the "group" edge to the Group entity by ID.
+func (atc *AccessTokenCreate) SetGroupID(id uuid.UUID) *AccessTokenCreate {
+	atc.mutation.SetGroupID(id)
+	return atc
+}
+
+// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
+func (atc *AccessTokenCreate) SetNillableGroupID(id *uuid.UUID) *AccessTokenCreate {
+	if id != nil {
+		atc = atc.SetGroupID(*id)
+	}
+	return atc
+}
+
+// SetGroup sets the "group" edge to the Group entity.
+func (atc *AccessTokenCreate) SetGroup(g *Group) *AccessTokenCreate {
+	return atc.SetGroupID(g.ID)
+}
+
 // Mutation returns the AccessTokenMutation object of the builder.
 func (atc *AccessTokenCreate) Mutation() *AccessTokenMutation {
 	return atc.mutation
@@ -28,6 +97,7 @@ func (atc *AccessTokenCreate) Mutation() *AccessTokenMutation {
 
 // Save creates the AccessToken in the database.
 func (atc *AccessTokenCreate) Save(ctx context.Context) (*AccessToken, error) {
+	atc.defaults()
 	return withHooks(ctx, atc.sqlSave, atc.mutation, atc.hooks)
 }
 
@@ -53,8 +123,22 @@ func (atc *AccessTokenCreate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (atc *AccessTokenCreate) defaults() {
+	if _, ok := atc.mutation.ID(); !ok {
+		v := accesstoken.DefaultID()
+		atc.mutation.SetID(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (atc *AccessTokenCreate) check() error {
+	if _, ok := atc.mutation.Token(); !ok {
+		return &ValidationError{Name: "token", err: errors.New(`ent: missing required field "AccessToken.token"`)}
+	}
+	if _, ok := atc.mutation.ExpiresAt(); !ok {
+		return &ValidationError{Name: "expires_at", err: errors.New(`ent: missing required field "AccessToken.expires_at"`)}
+	}
 	return nil
 }
 
@@ -69,8 +153,13 @@ func (atc *AccessTokenCreate) sqlSave(ctx context.Context) (*AccessToken, error)
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	atc.mutation.id = &_node.ID
 	atc.mutation.done = true
 	return _node, nil
@@ -79,9 +168,55 @@ func (atc *AccessTokenCreate) sqlSave(ctx context.Context) (*AccessToken, error)
 func (atc *AccessTokenCreate) createSpec() (*AccessToken, *sqlgraph.CreateSpec) {
 	var (
 		_node = &AccessToken{config: atc.config}
-		_spec = sqlgraph.NewCreateSpec(accesstoken.Table, sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeInt))
+		_spec = sqlgraph.NewCreateSpec(accesstoken.Table, sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID))
 	)
 	_spec.OnConflict = atc.conflict
+	if id, ok := atc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
+	if value, ok := atc.mutation.Token(); ok {
+		_spec.SetField(accesstoken.FieldToken, field.TypeString, value)
+		_node.Token = value
+	}
+	if value, ok := atc.mutation.ExpiresAt(); ok {
+		_spec.SetField(accesstoken.FieldExpiresAt, field.TypeTime, value)
+		_node.ExpiresAt = value
+	}
+	if nodes := atc.mutation.UserIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   accesstoken.UserTable,
+			Columns: []string{accesstoken.UserColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.user_access_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := atc.mutation.GroupIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   accesstoken.GroupTable,
+			Columns: []string{accesstoken.GroupColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.group_access_tokens = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
 	return _node, _spec
 }
 
@@ -89,11 +224,17 @@ func (atc *AccessTokenCreate) createSpec() (*AccessToken, *sqlgraph.CreateSpec) 
 // of the `INSERT` statement. For example:
 //
 //	client.AccessToken.Create().
+//		SetToken(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.AccessTokenUpsert) {
+//			SetToken(v+v).
+//		}).
 //		Exec(ctx)
 func (atc *AccessTokenCreate) OnConflict(opts ...sql.ConflictOption) *AccessTokenUpsertOne {
 	atc.conflict = opts
@@ -128,16 +269,48 @@ type (
 	}
 )
 
-// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// SetToken sets the "token" field.
+func (u *AccessTokenUpsert) SetToken(v string) *AccessTokenUpsert {
+	u.Set(accesstoken.FieldToken, v)
+	return u
+}
+
+// UpdateToken sets the "token" field to the value that was provided on create.
+func (u *AccessTokenUpsert) UpdateToken() *AccessTokenUpsert {
+	u.SetExcluded(accesstoken.FieldToken)
+	return u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *AccessTokenUpsert) SetExpiresAt(v time.Time) *AccessTokenUpsert {
+	u.Set(accesstoken.FieldExpiresAt, v)
+	return u
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *AccessTokenUpsert) UpdateExpiresAt() *AccessTokenUpsert {
+	u.SetExcluded(accesstoken.FieldExpiresAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
 //	client.AccessToken.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(accesstoken.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *AccessTokenUpsertOne) UpdateNewValues() *AccessTokenUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(accesstoken.FieldID)
+		}
+	}))
 	return u
 }
 
@@ -168,6 +341,34 @@ func (u *AccessTokenUpsertOne) Update(set func(*AccessTokenUpsert)) *AccessToken
 	return u
 }
 
+// SetToken sets the "token" field.
+func (u *AccessTokenUpsertOne) SetToken(v string) *AccessTokenUpsertOne {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.SetToken(v)
+	})
+}
+
+// UpdateToken sets the "token" field to the value that was provided on create.
+func (u *AccessTokenUpsertOne) UpdateToken() *AccessTokenUpsertOne {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.UpdateToken()
+	})
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *AccessTokenUpsertOne) SetExpiresAt(v time.Time) *AccessTokenUpsertOne {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.SetExpiresAt(v)
+	})
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *AccessTokenUpsertOne) UpdateExpiresAt() *AccessTokenUpsertOne {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.UpdateExpiresAt()
+	})
+}
+
 // Exec executes the query.
 func (u *AccessTokenUpsertOne) Exec(ctx context.Context) error {
 	if len(u.create.conflict) == 0 {
@@ -184,7 +385,12 @@ func (u *AccessTokenUpsertOne) ExecX(ctx context.Context) {
 }
 
 // Exec executes the UPSERT query and returns the inserted/updated ID.
-func (u *AccessTokenUpsertOne) ID(ctx context.Context) (id int, err error) {
+func (u *AccessTokenUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: AccessTokenUpsertOne.ID is not supported by MySQL driver. Use AccessTokenUpsertOne.Exec instead")
+	}
 	node, err := u.create.Save(ctx)
 	if err != nil {
 		return id, err
@@ -193,7 +399,7 @@ func (u *AccessTokenUpsertOne) ID(ctx context.Context) (id int, err error) {
 }
 
 // IDX is like ID, but panics if an error occurs.
-func (u *AccessTokenUpsertOne) IDX(ctx context.Context) int {
+func (u *AccessTokenUpsertOne) IDX(ctx context.Context) uuid.UUID {
 	id, err := u.ID(ctx)
 	if err != nil {
 		panic(err)
@@ -220,6 +426,7 @@ func (atcb *AccessTokenCreateBulk) Save(ctx context.Context) ([]*AccessToken, er
 	for i := range atcb.builders {
 		func(i int, root context.Context) {
 			builder := atcb.builders[i]
+			builder.defaults()
 			var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 				mutation, ok := m.(*AccessTokenMutation)
 				if !ok {
@@ -247,10 +454,6 @@ func (atcb *AccessTokenCreateBulk) Save(ctx context.Context) ([]*AccessToken, er
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				mutation.done = true
 				return nodes[i], nil
 			})
@@ -299,6 +502,11 @@ func (atcb *AccessTokenCreateBulk) ExecX(ctx context.Context) {
 //			// the was proposed for insertion.
 //			sql.ResolveWithNewValues(),
 //		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.AccessTokenUpsert) {
+//			SetToken(v+v).
+//		}).
 //		Exec(ctx)
 func (atcb *AccessTokenCreateBulk) OnConflict(opts ...sql.ConflictOption) *AccessTokenUpsertBulk {
 	atcb.conflict = opts
@@ -332,10 +540,20 @@ type AccessTokenUpsertBulk struct {
 //	client.AccessToken.Create().
 //		OnConflict(
 //			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(accesstoken.FieldID)
+//			}),
 //		).
 //		Exec(ctx)
 func (u *AccessTokenUpsertBulk) UpdateNewValues() *AccessTokenUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(accesstoken.FieldID)
+			}
+		}
+	}))
 	return u
 }
 
@@ -364,6 +582,34 @@ func (u *AccessTokenUpsertBulk) Update(set func(*AccessTokenUpsert)) *AccessToke
 		set(&AccessTokenUpsert{UpdateSet: update})
 	}))
 	return u
+}
+
+// SetToken sets the "token" field.
+func (u *AccessTokenUpsertBulk) SetToken(v string) *AccessTokenUpsertBulk {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.SetToken(v)
+	})
+}
+
+// UpdateToken sets the "token" field to the value that was provided on create.
+func (u *AccessTokenUpsertBulk) UpdateToken() *AccessTokenUpsertBulk {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.UpdateToken()
+	})
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *AccessTokenUpsertBulk) SetExpiresAt(v time.Time) *AccessTokenUpsertBulk {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.SetExpiresAt(v)
+	})
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *AccessTokenUpsertBulk) UpdateExpiresAt() *AccessTokenUpsertBulk {
+	return u.Update(func(s *AccessTokenUpsert) {
+		s.UpdateExpiresAt()
+	})
 }
 
 // Exec executes the query.

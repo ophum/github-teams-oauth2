@@ -7,10 +7,12 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
 	"github.com/ophum/github-teams-oauth2/ent/code"
 	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/predicate"
@@ -37,8 +39,14 @@ type AccessTokenMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int
+	id            *uuid.UUID
+	token         *string
+	expires_at    *time.Time
 	clearedFields map[string]struct{}
+	user          *uuid.UUID
+	cleareduser   bool
+	group         *uuid.UUID
+	clearedgroup  bool
 	done          bool
 	oldValue      func(context.Context) (*AccessToken, error)
 	predicates    []predicate.AccessToken
@@ -64,7 +72,7 @@ func newAccessTokenMutation(c config, op Op, opts ...accesstokenOption) *AccessT
 }
 
 // withAccessTokenID sets the ID field of the mutation.
-func withAccessTokenID(id int) accesstokenOption {
+func withAccessTokenID(id uuid.UUID) accesstokenOption {
 	return func(m *AccessTokenMutation) {
 		var (
 			err   error
@@ -114,9 +122,15 @@ func (m AccessTokenMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of AccessToken entities.
+func (m *AccessTokenMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *AccessTokenMutation) ID() (id int, exists bool) {
+func (m *AccessTokenMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -127,12 +141,12 @@ func (m *AccessTokenMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *AccessTokenMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *AccessTokenMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -140,6 +154,156 @@ func (m *AccessTokenMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetToken sets the "token" field.
+func (m *AccessTokenMutation) SetToken(s string) {
+	m.token = &s
+}
+
+// Token returns the value of the "token" field in the mutation.
+func (m *AccessTokenMutation) Token() (r string, exists bool) {
+	v := m.token
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldToken returns the old "token" field's value of the AccessToken entity.
+// If the AccessToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccessTokenMutation) OldToken(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldToken is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldToken requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldToken: %w", err)
+	}
+	return oldValue.Token, nil
+}
+
+// ResetToken resets all changes to the "token" field.
+func (m *AccessTokenMutation) ResetToken() {
+	m.token = nil
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *AccessTokenMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *AccessTokenMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the AccessToken entity.
+// If the AccessToken object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AccessTokenMutation) OldExpiresAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *AccessTokenMutation) ResetExpiresAt() {
+	m.expires_at = nil
+}
+
+// SetUserID sets the "user" edge to the User entity by id.
+func (m *AccessTokenMutation) SetUserID(id uuid.UUID) {
+	m.user = &id
+}
+
+// ClearUser clears the "user" edge to the User entity.
+func (m *AccessTokenMutation) ClearUser() {
+	m.cleareduser = true
+}
+
+// UserCleared reports if the "user" edge to the User entity was cleared.
+func (m *AccessTokenMutation) UserCleared() bool {
+	return m.cleareduser
+}
+
+// UserID returns the "user" edge ID in the mutation.
+func (m *AccessTokenMutation) UserID() (id uuid.UUID, exists bool) {
+	if m.user != nil {
+		return *m.user, true
+	}
+	return
+}
+
+// UserIDs returns the "user" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// UserID instead. It exists only for internal usage by the builders.
+func (m *AccessTokenMutation) UserIDs() (ids []uuid.UUID) {
+	if id := m.user; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetUser resets all changes to the "user" edge.
+func (m *AccessTokenMutation) ResetUser() {
+	m.user = nil
+	m.cleareduser = false
+}
+
+// SetGroupID sets the "group" edge to the Group entity by id.
+func (m *AccessTokenMutation) SetGroupID(id uuid.UUID) {
+	m.group = &id
+}
+
+// ClearGroup clears the "group" edge to the Group entity.
+func (m *AccessTokenMutation) ClearGroup() {
+	m.clearedgroup = true
+}
+
+// GroupCleared reports if the "group" edge to the Group entity was cleared.
+func (m *AccessTokenMutation) GroupCleared() bool {
+	return m.clearedgroup
+}
+
+// GroupID returns the "group" edge ID in the mutation.
+func (m *AccessTokenMutation) GroupID() (id uuid.UUID, exists bool) {
+	if m.group != nil {
+		return *m.group, true
+	}
+	return
+}
+
+// GroupIDs returns the "group" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// GroupID instead. It exists only for internal usage by the builders.
+func (m *AccessTokenMutation) GroupIDs() (ids []uuid.UUID) {
+	if id := m.group; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetGroup resets all changes to the "group" edge.
+func (m *AccessTokenMutation) ResetGroup() {
+	m.group = nil
+	m.clearedgroup = false
 }
 
 // Where appends a list predicates to the AccessTokenMutation builder.
@@ -176,7 +340,13 @@ func (m *AccessTokenMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AccessTokenMutation) Fields() []string {
-	fields := make([]string, 0, 0)
+	fields := make([]string, 0, 2)
+	if m.token != nil {
+		fields = append(fields, accesstoken.FieldToken)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, accesstoken.FieldExpiresAt)
+	}
 	return fields
 }
 
@@ -184,6 +354,12 @@ func (m *AccessTokenMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *AccessTokenMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case accesstoken.FieldToken:
+		return m.Token()
+	case accesstoken.FieldExpiresAt:
+		return m.ExpiresAt()
+	}
 	return nil, false
 }
 
@@ -191,6 +367,12 @@ func (m *AccessTokenMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *AccessTokenMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case accesstoken.FieldToken:
+		return m.OldToken(ctx)
+	case accesstoken.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
+	}
 	return nil, fmt.Errorf("unknown AccessToken field %s", name)
 }
 
@@ -199,6 +381,20 @@ func (m *AccessTokenMutation) OldField(ctx context.Context, name string) (ent.Va
 // type.
 func (m *AccessTokenMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case accesstoken.FieldToken:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetToken(v)
+		return nil
+	case accesstoken.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AccessToken field %s", name)
 }
@@ -220,6 +416,8 @@ func (m *AccessTokenMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *AccessTokenMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown AccessToken numeric field %s", name)
 }
 
@@ -245,24 +443,48 @@ func (m *AccessTokenMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *AccessTokenMutation) ResetField(name string) error {
+	switch name {
+	case accesstoken.FieldToken:
+		m.ResetToken()
+		return nil
+	case accesstoken.FieldExpiresAt:
+		m.ResetExpiresAt()
+		return nil
+	}
 	return fmt.Errorf("unknown AccessToken field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AccessTokenMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.user != nil {
+		edges = append(edges, accesstoken.EdgeUser)
+	}
+	if m.group != nil {
+		edges = append(edges, accesstoken.EdgeGroup)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *AccessTokenMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case accesstoken.EdgeUser:
+		if id := m.user; id != nil {
+			return []ent.Value{*id}
+		}
+	case accesstoken.EdgeGroup:
+		if id := m.group; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AccessTokenMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -274,25 +496,53 @@ func (m *AccessTokenMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AccessTokenMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 2)
+	if m.cleareduser {
+		edges = append(edges, accesstoken.EdgeUser)
+	}
+	if m.clearedgroup {
+		edges = append(edges, accesstoken.EdgeGroup)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *AccessTokenMutation) EdgeCleared(name string) bool {
+	switch name {
+	case accesstoken.EdgeUser:
+		return m.cleareduser
+	case accesstoken.EdgeGroup:
+		return m.clearedgroup
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *AccessTokenMutation) ClearEdge(name string) error {
+	switch name {
+	case accesstoken.EdgeUser:
+		m.ClearUser()
+		return nil
+	case accesstoken.EdgeGroup:
+		m.ClearGroup()
+		return nil
+	}
 	return fmt.Errorf("unknown AccessToken unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *AccessTokenMutation) ResetEdge(name string) error {
+	switch name {
+	case accesstoken.EdgeUser:
+		m.ResetUser()
+		return nil
+	case accesstoken.EdgeGroup:
+		m.ResetGroup()
+		return nil
+	}
 	return fmt.Errorf("unknown AccessToken edge %s", name)
 }
 
@@ -303,6 +553,9 @@ type CodeMutation struct {
 	typ           string
 	id            *uuid.UUID
 	code          *string
+	client_id     *string
+	redirect_uri  *string
+	expires_at    *time.Time
 	clearedFields map[string]struct{}
 	user          *uuid.UUID
 	cleareduser   bool
@@ -453,6 +706,114 @@ func (m *CodeMutation) ResetCode() {
 	m.code = nil
 }
 
+// SetClientID sets the "client_id" field.
+func (m *CodeMutation) SetClientID(s string) {
+	m.client_id = &s
+}
+
+// ClientID returns the value of the "client_id" field in the mutation.
+func (m *CodeMutation) ClientID() (r string, exists bool) {
+	v := m.client_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClientID returns the old "client_id" field's value of the Code entity.
+// If the Code object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CodeMutation) OldClientID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClientID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClientID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClientID: %w", err)
+	}
+	return oldValue.ClientID, nil
+}
+
+// ResetClientID resets all changes to the "client_id" field.
+func (m *CodeMutation) ResetClientID() {
+	m.client_id = nil
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (m *CodeMutation) SetRedirectURI(s string) {
+	m.redirect_uri = &s
+}
+
+// RedirectURI returns the value of the "redirect_uri" field in the mutation.
+func (m *CodeMutation) RedirectURI() (r string, exists bool) {
+	v := m.redirect_uri
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRedirectURI returns the old "redirect_uri" field's value of the Code entity.
+// If the Code object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CodeMutation) OldRedirectURI(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRedirectURI is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRedirectURI requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRedirectURI: %w", err)
+	}
+	return oldValue.RedirectURI, nil
+}
+
+// ResetRedirectURI resets all changes to the "redirect_uri" field.
+func (m *CodeMutation) ResetRedirectURI() {
+	m.redirect_uri = nil
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (m *CodeMutation) SetExpiresAt(t time.Time) {
+	m.expires_at = &t
+}
+
+// ExpiresAt returns the value of the "expires_at" field in the mutation.
+func (m *CodeMutation) ExpiresAt() (r time.Time, exists bool) {
+	v := m.expires_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldExpiresAt returns the old "expires_at" field's value of the Code entity.
+// If the Code object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CodeMutation) OldExpiresAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldExpiresAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldExpiresAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldExpiresAt: %w", err)
+	}
+	return oldValue.ExpiresAt, nil
+}
+
+// ResetExpiresAt resets all changes to the "expires_at" field.
+func (m *CodeMutation) ResetExpiresAt() {
+	m.expires_at = nil
+}
+
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *CodeMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -565,9 +926,18 @@ func (m *CodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CodeMutation) Fields() []string {
-	fields := make([]string, 0, 1)
+	fields := make([]string, 0, 4)
 	if m.code != nil {
 		fields = append(fields, code.FieldCode)
+	}
+	if m.client_id != nil {
+		fields = append(fields, code.FieldClientID)
+	}
+	if m.redirect_uri != nil {
+		fields = append(fields, code.FieldRedirectURI)
+	}
+	if m.expires_at != nil {
+		fields = append(fields, code.FieldExpiresAt)
 	}
 	return fields
 }
@@ -579,6 +949,12 @@ func (m *CodeMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case code.FieldCode:
 		return m.Code()
+	case code.FieldClientID:
+		return m.ClientID()
+	case code.FieldRedirectURI:
+		return m.RedirectURI()
+	case code.FieldExpiresAt:
+		return m.ExpiresAt()
 	}
 	return nil, false
 }
@@ -590,6 +966,12 @@ func (m *CodeMutation) OldField(ctx context.Context, name string) (ent.Value, er
 	switch name {
 	case code.FieldCode:
 		return m.OldCode(ctx)
+	case code.FieldClientID:
+		return m.OldClientID(ctx)
+	case code.FieldRedirectURI:
+		return m.OldRedirectURI(ctx)
+	case code.FieldExpiresAt:
+		return m.OldExpiresAt(ctx)
 	}
 	return nil, fmt.Errorf("unknown Code field %s", name)
 }
@@ -605,6 +987,27 @@ func (m *CodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetCode(v)
+		return nil
+	case code.FieldClientID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClientID(v)
+		return nil
+	case code.FieldRedirectURI:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRedirectURI(v)
+		return nil
+	case code.FieldExpiresAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetExpiresAt(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Code field %s", name)
@@ -657,6 +1060,15 @@ func (m *CodeMutation) ResetField(name string) error {
 	switch name {
 	case code.FieldCode:
 		m.ResetCode()
+		return nil
+	case code.FieldClientID:
+		m.ResetClientID()
+		return nil
+	case code.FieldRedirectURI:
+		m.ResetRedirectURI()
+		return nil
+	case code.FieldExpiresAt:
+		m.ResetExpiresAt()
 		return nil
 	}
 	return fmt.Errorf("unknown Code field %s", name)
@@ -757,20 +1169,23 @@ func (m *CodeMutation) ResetEdge(name string) error {
 // GroupMutation represents an operation that mutates the Group nodes in the graph.
 type GroupMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	name          *string
-	clearedFields map[string]struct{}
-	users         map[uuid.UUID]struct{}
-	removedusers  map[uuid.UUID]struct{}
-	clearedusers  bool
-	codes         map[uuid.UUID]struct{}
-	removedcodes  map[uuid.UUID]struct{}
-	clearedcodes  bool
-	done          bool
-	oldValue      func(context.Context) (*Group, error)
-	predicates    []predicate.Group
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	name                 *string
+	clearedFields        map[string]struct{}
+	users                map[uuid.UUID]struct{}
+	removedusers         map[uuid.UUID]struct{}
+	clearedusers         bool
+	codes                map[uuid.UUID]struct{}
+	removedcodes         map[uuid.UUID]struct{}
+	clearedcodes         bool
+	access_tokens        map[uuid.UUID]struct{}
+	removedaccess_tokens map[uuid.UUID]struct{}
+	clearedaccess_tokens bool
+	done                 bool
+	oldValue             func(context.Context) (*Group, error)
+	predicates           []predicate.Group
 }
 
 var _ ent.Mutation = (*GroupMutation)(nil)
@@ -1021,6 +1436,60 @@ func (m *GroupMutation) ResetCodes() {
 	m.removedcodes = nil
 }
 
+// AddAccessTokenIDs adds the "access_tokens" edge to the AccessToken entity by ids.
+func (m *GroupMutation) AddAccessTokenIDs(ids ...uuid.UUID) {
+	if m.access_tokens == nil {
+		m.access_tokens = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.access_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAccessTokens clears the "access_tokens" edge to the AccessToken entity.
+func (m *GroupMutation) ClearAccessTokens() {
+	m.clearedaccess_tokens = true
+}
+
+// AccessTokensCleared reports if the "access_tokens" edge to the AccessToken entity was cleared.
+func (m *GroupMutation) AccessTokensCleared() bool {
+	return m.clearedaccess_tokens
+}
+
+// RemoveAccessTokenIDs removes the "access_tokens" edge to the AccessToken entity by IDs.
+func (m *GroupMutation) RemoveAccessTokenIDs(ids ...uuid.UUID) {
+	if m.removedaccess_tokens == nil {
+		m.removedaccess_tokens = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.access_tokens, ids[i])
+		m.removedaccess_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAccessTokens returns the removed IDs of the "access_tokens" edge to the AccessToken entity.
+func (m *GroupMutation) RemovedAccessTokensIDs() (ids []uuid.UUID) {
+	for id := range m.removedaccess_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AccessTokensIDs returns the "access_tokens" edge IDs in the mutation.
+func (m *GroupMutation) AccessTokensIDs() (ids []uuid.UUID) {
+	for id := range m.access_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAccessTokens resets all changes to the "access_tokens" edge.
+func (m *GroupMutation) ResetAccessTokens() {
+	m.access_tokens = nil
+	m.clearedaccess_tokens = false
+	m.removedaccess_tokens = nil
+}
+
 // Where appends a list predicates to the GroupMutation builder.
 func (m *GroupMutation) Where(ps ...predicate.Group) {
 	m.predicates = append(m.predicates, ps...)
@@ -1154,12 +1623,15 @@ func (m *GroupMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *GroupMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.users != nil {
 		edges = append(edges, group.EdgeUsers)
 	}
 	if m.codes != nil {
 		edges = append(edges, group.EdgeCodes)
+	}
+	if m.access_tokens != nil {
+		edges = append(edges, group.EdgeAccessTokens)
 	}
 	return edges
 }
@@ -1180,18 +1652,27 @@ func (m *GroupMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case group.EdgeAccessTokens:
+		ids := make([]ent.Value, 0, len(m.access_tokens))
+		for id := range m.access_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *GroupMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedusers != nil {
 		edges = append(edges, group.EdgeUsers)
 	}
 	if m.removedcodes != nil {
 		edges = append(edges, group.EdgeCodes)
+	}
+	if m.removedaccess_tokens != nil {
+		edges = append(edges, group.EdgeAccessTokens)
 	}
 	return edges
 }
@@ -1212,18 +1693,27 @@ func (m *GroupMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case group.EdgeAccessTokens:
+		ids := make([]ent.Value, 0, len(m.removedaccess_tokens))
+		for id := range m.removedaccess_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *GroupMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedusers {
 		edges = append(edges, group.EdgeUsers)
 	}
 	if m.clearedcodes {
 		edges = append(edges, group.EdgeCodes)
+	}
+	if m.clearedaccess_tokens {
+		edges = append(edges, group.EdgeAccessTokens)
 	}
 	return edges
 }
@@ -1236,6 +1726,8 @@ func (m *GroupMutation) EdgeCleared(name string) bool {
 		return m.clearedusers
 	case group.EdgeCodes:
 		return m.clearedcodes
+	case group.EdgeAccessTokens:
+		return m.clearedaccess_tokens
 	}
 	return false
 }
@@ -1258,6 +1750,9 @@ func (m *GroupMutation) ResetEdge(name string) error {
 	case group.EdgeCodes:
 		m.ResetCodes()
 		return nil
+	case group.EdgeAccessTokens:
+		m.ResetAccessTokens()
+		return nil
 	}
 	return fmt.Errorf("unknown Group edge %s", name)
 }
@@ -1265,20 +1760,23 @@ func (m *GroupMutation) ResetEdge(name string) error {
 // UserMutation represents an operation that mutates the User nodes in the graph.
 type UserMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	name          *string
-	clearedFields map[string]struct{}
-	groups        map[uuid.UUID]struct{}
-	removedgroups map[uuid.UUID]struct{}
-	clearedgroups bool
-	codes         map[uuid.UUID]struct{}
-	removedcodes  map[uuid.UUID]struct{}
-	clearedcodes  bool
-	done          bool
-	oldValue      func(context.Context) (*User, error)
-	predicates    []predicate.User
+	op                   Op
+	typ                  string
+	id                   *uuid.UUID
+	name                 *string
+	clearedFields        map[string]struct{}
+	groups               map[uuid.UUID]struct{}
+	removedgroups        map[uuid.UUID]struct{}
+	clearedgroups        bool
+	codes                map[uuid.UUID]struct{}
+	removedcodes         map[uuid.UUID]struct{}
+	clearedcodes         bool
+	access_tokens        map[uuid.UUID]struct{}
+	removedaccess_tokens map[uuid.UUID]struct{}
+	clearedaccess_tokens bool
+	done                 bool
+	oldValue             func(context.Context) (*User, error)
+	predicates           []predicate.User
 }
 
 var _ ent.Mutation = (*UserMutation)(nil)
@@ -1529,6 +2027,60 @@ func (m *UserMutation) ResetCodes() {
 	m.removedcodes = nil
 }
 
+// AddAccessTokenIDs adds the "access_tokens" edge to the AccessToken entity by ids.
+func (m *UserMutation) AddAccessTokenIDs(ids ...uuid.UUID) {
+	if m.access_tokens == nil {
+		m.access_tokens = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.access_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// ClearAccessTokens clears the "access_tokens" edge to the AccessToken entity.
+func (m *UserMutation) ClearAccessTokens() {
+	m.clearedaccess_tokens = true
+}
+
+// AccessTokensCleared reports if the "access_tokens" edge to the AccessToken entity was cleared.
+func (m *UserMutation) AccessTokensCleared() bool {
+	return m.clearedaccess_tokens
+}
+
+// RemoveAccessTokenIDs removes the "access_tokens" edge to the AccessToken entity by IDs.
+func (m *UserMutation) RemoveAccessTokenIDs(ids ...uuid.UUID) {
+	if m.removedaccess_tokens == nil {
+		m.removedaccess_tokens = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.access_tokens, ids[i])
+		m.removedaccess_tokens[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedAccessTokens returns the removed IDs of the "access_tokens" edge to the AccessToken entity.
+func (m *UserMutation) RemovedAccessTokensIDs() (ids []uuid.UUID) {
+	for id := range m.removedaccess_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// AccessTokensIDs returns the "access_tokens" edge IDs in the mutation.
+func (m *UserMutation) AccessTokensIDs() (ids []uuid.UUID) {
+	for id := range m.access_tokens {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetAccessTokens resets all changes to the "access_tokens" edge.
+func (m *UserMutation) ResetAccessTokens() {
+	m.access_tokens = nil
+	m.clearedaccess_tokens = false
+	m.removedaccess_tokens = nil
+}
+
 // Where appends a list predicates to the UserMutation builder.
 func (m *UserMutation) Where(ps ...predicate.User) {
 	m.predicates = append(m.predicates, ps...)
@@ -1662,12 +2214,15 @@ func (m *UserMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *UserMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.groups != nil {
 		edges = append(edges, user.EdgeGroups)
 	}
 	if m.codes != nil {
 		edges = append(edges, user.EdgeCodes)
+	}
+	if m.access_tokens != nil {
+		edges = append(edges, user.EdgeAccessTokens)
 	}
 	return edges
 }
@@ -1688,18 +2243,27 @@ func (m *UserMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeAccessTokens:
+		ids := make([]ent.Value, 0, len(m.access_tokens))
+		for id := range m.access_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *UserMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedgroups != nil {
 		edges = append(edges, user.EdgeGroups)
 	}
 	if m.removedcodes != nil {
 		edges = append(edges, user.EdgeCodes)
+	}
+	if m.removedaccess_tokens != nil {
+		edges = append(edges, user.EdgeAccessTokens)
 	}
 	return edges
 }
@@ -1720,18 +2284,27 @@ func (m *UserMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case user.EdgeAccessTokens:
+		ids := make([]ent.Value, 0, len(m.removedaccess_tokens))
+		for id := range m.removedaccess_tokens {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *UserMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedgroups {
 		edges = append(edges, user.EdgeGroups)
 	}
 	if m.clearedcodes {
 		edges = append(edges, user.EdgeCodes)
+	}
+	if m.clearedaccess_tokens {
+		edges = append(edges, user.EdgeAccessTokens)
 	}
 	return edges
 }
@@ -1744,6 +2317,8 @@ func (m *UserMutation) EdgeCleared(name string) bool {
 		return m.clearedgroups
 	case user.EdgeCodes:
 		return m.clearedcodes
+	case user.EdgeAccessTokens:
+		return m.clearedaccess_tokens
 	}
 	return false
 }
@@ -1765,6 +2340,9 @@ func (m *UserMutation) ResetEdge(name string) error {
 		return nil
 	case user.EdgeCodes:
 		m.ResetCodes()
+		return nil
+	case user.EdgeAccessTokens:
+		m.ResetAccessTokens()
 		return nil
 	}
 	return fmt.Errorf("unknown User edge %s", name)

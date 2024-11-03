@@ -5,4 +5,7 @@ gen:
     go generate ./ent
 
 run: gen
-    go run main.go
+    go run main.go --config config.yaml server
+
+migrate: gen
+    go run main.go --config config.yaml migrate

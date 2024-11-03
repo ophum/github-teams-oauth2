@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
 	"github.com/ophum/github-teams-oauth2/ent/code"
 	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/user"
@@ -73,6 +74,21 @@ func (uc *UserCreate) AddCodes(c ...*Code) *UserCreate {
 		ids[i] = c[i].ID
 	}
 	return uc.AddCodeIDs(ids...)
+}
+
+// AddAccessTokenIDs adds the "access_tokens" edge to the AccessToken entity by IDs.
+func (uc *UserCreate) AddAccessTokenIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddAccessTokenIDs(ids...)
+	return uc
+}
+
+// AddAccessTokens adds the "access_tokens" edges to the AccessToken entity.
+func (uc *UserCreate) AddAccessTokens(a ...*AccessToken) *UserCreate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return uc.AddAccessTokenIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -186,6 +202,22 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.AccessTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.AccessTokensTable,
+			Columns: []string{user.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

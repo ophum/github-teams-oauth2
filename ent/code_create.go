@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
@@ -28,6 +29,40 @@ type CodeCreate struct {
 // SetCode sets the "code" field.
 func (cc *CodeCreate) SetCode(s string) *CodeCreate {
 	cc.mutation.SetCode(s)
+	return cc
+}
+
+// SetClientID sets the "client_id" field.
+func (cc *CodeCreate) SetClientID(s string) *CodeCreate {
+	cc.mutation.SetClientID(s)
+	return cc
+}
+
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (cc *CodeCreate) SetNillableClientID(s *string) *CodeCreate {
+	if s != nil {
+		cc.SetClientID(*s)
+	}
+	return cc
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (cc *CodeCreate) SetRedirectURI(s string) *CodeCreate {
+	cc.mutation.SetRedirectURI(s)
+	return cc
+}
+
+// SetNillableRedirectURI sets the "redirect_uri" field if the given value is not nil.
+func (cc *CodeCreate) SetNillableRedirectURI(s *string) *CodeCreate {
+	if s != nil {
+		cc.SetRedirectURI(*s)
+	}
+	return cc
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (cc *CodeCreate) SetExpiresAt(t time.Time) *CodeCreate {
+	cc.mutation.SetExpiresAt(t)
 	return cc
 }
 
@@ -118,6 +153,14 @@ func (cc *CodeCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (cc *CodeCreate) defaults() {
+	if _, ok := cc.mutation.ClientID(); !ok {
+		v := code.DefaultClientID
+		cc.mutation.SetClientID(v)
+	}
+	if _, ok := cc.mutation.RedirectURI(); !ok {
+		v := code.DefaultRedirectURI
+		cc.mutation.SetRedirectURI(v)
+	}
 	if _, ok := cc.mutation.ID(); !ok {
 		v := code.DefaultID()
 		cc.mutation.SetID(v)
@@ -128,6 +171,15 @@ func (cc *CodeCreate) defaults() {
 func (cc *CodeCreate) check() error {
 	if _, ok := cc.mutation.Code(); !ok {
 		return &ValidationError{Name: "code", err: errors.New(`ent: missing required field "Code.code"`)}
+	}
+	if _, ok := cc.mutation.ClientID(); !ok {
+		return &ValidationError{Name: "client_id", err: errors.New(`ent: missing required field "Code.client_id"`)}
+	}
+	if _, ok := cc.mutation.RedirectURI(); !ok {
+		return &ValidationError{Name: "redirect_uri", err: errors.New(`ent: missing required field "Code.redirect_uri"`)}
+	}
+	if _, ok := cc.mutation.ExpiresAt(); !ok {
+		return &ValidationError{Name: "expires_at", err: errors.New(`ent: missing required field "Code.expires_at"`)}
 	}
 	return nil
 }
@@ -168,6 +220,18 @@ func (cc *CodeCreate) createSpec() (*Code, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.Code(); ok {
 		_spec.SetField(code.FieldCode, field.TypeString, value)
 		_node.Code = value
+	}
+	if value, ok := cc.mutation.ClientID(); ok {
+		_spec.SetField(code.FieldClientID, field.TypeString, value)
+		_node.ClientID = value
+	}
+	if value, ok := cc.mutation.RedirectURI(); ok {
+		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
+		_node.RedirectURI = value
+	}
+	if value, ok := cc.mutation.ExpiresAt(); ok {
+		_spec.SetField(code.FieldExpiresAt, field.TypeTime, value)
+		_node.ExpiresAt = value
 	}
 	if nodes := cc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
@@ -267,6 +331,42 @@ func (u *CodeUpsert) UpdateCode() *CodeUpsert {
 	return u
 }
 
+// SetClientID sets the "client_id" field.
+func (u *CodeUpsert) SetClientID(v string) *CodeUpsert {
+	u.Set(code.FieldClientID, v)
+	return u
+}
+
+// UpdateClientID sets the "client_id" field to the value that was provided on create.
+func (u *CodeUpsert) UpdateClientID() *CodeUpsert {
+	u.SetExcluded(code.FieldClientID)
+	return u
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (u *CodeUpsert) SetRedirectURI(v string) *CodeUpsert {
+	u.Set(code.FieldRedirectURI, v)
+	return u
+}
+
+// UpdateRedirectURI sets the "redirect_uri" field to the value that was provided on create.
+func (u *CodeUpsert) UpdateRedirectURI() *CodeUpsert {
+	u.SetExcluded(code.FieldRedirectURI)
+	return u
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *CodeUpsert) SetExpiresAt(v time.Time) *CodeUpsert {
+	u.Set(code.FieldExpiresAt, v)
+	return u
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *CodeUpsert) UpdateExpiresAt() *CodeUpsert {
+	u.SetExcluded(code.FieldExpiresAt)
+	return u
+}
+
 // UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
 // Using this option is equivalent to using:
 //
@@ -326,6 +426,48 @@ func (u *CodeUpsertOne) SetCode(v string) *CodeUpsertOne {
 func (u *CodeUpsertOne) UpdateCode() *CodeUpsertOne {
 	return u.Update(func(s *CodeUpsert) {
 		s.UpdateCode()
+	})
+}
+
+// SetClientID sets the "client_id" field.
+func (u *CodeUpsertOne) SetClientID(v string) *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetClientID(v)
+	})
+}
+
+// UpdateClientID sets the "client_id" field to the value that was provided on create.
+func (u *CodeUpsertOne) UpdateClientID() *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateClientID()
+	})
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (u *CodeUpsertOne) SetRedirectURI(v string) *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetRedirectURI(v)
+	})
+}
+
+// UpdateRedirectURI sets the "redirect_uri" field to the value that was provided on create.
+func (u *CodeUpsertOne) UpdateRedirectURI() *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateRedirectURI()
+	})
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *CodeUpsertOne) SetExpiresAt(v time.Time) *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetExpiresAt(v)
+	})
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *CodeUpsertOne) UpdateExpiresAt() *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateExpiresAt()
 	})
 }
 
@@ -555,6 +697,48 @@ func (u *CodeUpsertBulk) SetCode(v string) *CodeUpsertBulk {
 func (u *CodeUpsertBulk) UpdateCode() *CodeUpsertBulk {
 	return u.Update(func(s *CodeUpsert) {
 		s.UpdateCode()
+	})
+}
+
+// SetClientID sets the "client_id" field.
+func (u *CodeUpsertBulk) SetClientID(v string) *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetClientID(v)
+	})
+}
+
+// UpdateClientID sets the "client_id" field to the value that was provided on create.
+func (u *CodeUpsertBulk) UpdateClientID() *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateClientID()
+	})
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (u *CodeUpsertBulk) SetRedirectURI(v string) *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetRedirectURI(v)
+	})
+}
+
+// UpdateRedirectURI sets the "redirect_uri" field to the value that was provided on create.
+func (u *CodeUpsertBulk) UpdateRedirectURI() *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateRedirectURI()
+	})
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (u *CodeUpsertBulk) SetExpiresAt(v time.Time) *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetExpiresAt(v)
+	})
+}
+
+// UpdateExpiresAt sets the "expires_at" field to the value that was provided on create.
+func (u *CodeUpsertBulk) UpdateExpiresAt() *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateExpiresAt()
 	})
 }
 

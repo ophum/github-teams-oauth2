@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
+	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
 	"github.com/ophum/github-teams-oauth2/ent/code"
 	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/predicate"
@@ -74,6 +75,21 @@ func (gu *GroupUpdate) AddCodes(c ...*Code) *GroupUpdate {
 	return gu.AddCodeIDs(ids...)
 }
 
+// AddAccessTokenIDs adds the "access_tokens" edge to the AccessToken entity by IDs.
+func (gu *GroupUpdate) AddAccessTokenIDs(ids ...uuid.UUID) *GroupUpdate {
+	gu.mutation.AddAccessTokenIDs(ids...)
+	return gu
+}
+
+// AddAccessTokens adds the "access_tokens" edges to the AccessToken entity.
+func (gu *GroupUpdate) AddAccessTokens(a ...*AccessToken) *GroupUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return gu.AddAccessTokenIDs(ids...)
+}
+
 // Mutation returns the GroupMutation object of the builder.
 func (gu *GroupUpdate) Mutation() *GroupMutation {
 	return gu.mutation
@@ -119,6 +135,27 @@ func (gu *GroupUpdate) RemoveCodes(c ...*Code) *GroupUpdate {
 		ids[i] = c[i].ID
 	}
 	return gu.RemoveCodeIDs(ids...)
+}
+
+// ClearAccessTokens clears all "access_tokens" edges to the AccessToken entity.
+func (gu *GroupUpdate) ClearAccessTokens() *GroupUpdate {
+	gu.mutation.ClearAccessTokens()
+	return gu
+}
+
+// RemoveAccessTokenIDs removes the "access_tokens" edge to AccessToken entities by IDs.
+func (gu *GroupUpdate) RemoveAccessTokenIDs(ids ...uuid.UUID) *GroupUpdate {
+	gu.mutation.RemoveAccessTokenIDs(ids...)
+	return gu
+}
+
+// RemoveAccessTokens removes "access_tokens" edges to AccessToken entities.
+func (gu *GroupUpdate) RemoveAccessTokens(a ...*AccessToken) *GroupUpdate {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return gu.RemoveAccessTokenIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -250,6 +287,51 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if gu.mutation.AccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.AccessTokensTable,
+			Columns: []string{group.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.RemovedAccessTokensIDs(); len(nodes) > 0 && !gu.mutation.AccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.AccessTokensTable,
+			Columns: []string{group.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := gu.mutation.AccessTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.AccessTokensTable,
+			Columns: []string{group.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if n, err = sqlgraph.UpdateNodes(ctx, gu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{group.Label}
@@ -314,6 +396,21 @@ func (guo *GroupUpdateOne) AddCodes(c ...*Code) *GroupUpdateOne {
 	return guo.AddCodeIDs(ids...)
 }
 
+// AddAccessTokenIDs adds the "access_tokens" edge to the AccessToken entity by IDs.
+func (guo *GroupUpdateOne) AddAccessTokenIDs(ids ...uuid.UUID) *GroupUpdateOne {
+	guo.mutation.AddAccessTokenIDs(ids...)
+	return guo
+}
+
+// AddAccessTokens adds the "access_tokens" edges to the AccessToken entity.
+func (guo *GroupUpdateOne) AddAccessTokens(a ...*AccessToken) *GroupUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return guo.AddAccessTokenIDs(ids...)
+}
+
 // Mutation returns the GroupMutation object of the builder.
 func (guo *GroupUpdateOne) Mutation() *GroupMutation {
 	return guo.mutation
@@ -359,6 +456,27 @@ func (guo *GroupUpdateOne) RemoveCodes(c ...*Code) *GroupUpdateOne {
 		ids[i] = c[i].ID
 	}
 	return guo.RemoveCodeIDs(ids...)
+}
+
+// ClearAccessTokens clears all "access_tokens" edges to the AccessToken entity.
+func (guo *GroupUpdateOne) ClearAccessTokens() *GroupUpdateOne {
+	guo.mutation.ClearAccessTokens()
+	return guo
+}
+
+// RemoveAccessTokenIDs removes the "access_tokens" edge to AccessToken entities by IDs.
+func (guo *GroupUpdateOne) RemoveAccessTokenIDs(ids ...uuid.UUID) *GroupUpdateOne {
+	guo.mutation.RemoveAccessTokenIDs(ids...)
+	return guo
+}
+
+// RemoveAccessTokens removes "access_tokens" edges to AccessToken entities.
+func (guo *GroupUpdateOne) RemoveAccessTokens(a ...*AccessToken) *GroupUpdateOne {
+	ids := make([]uuid.UUID, len(a))
+	for i := range a {
+		ids[i] = a[i].ID
+	}
+	return guo.RemoveAccessTokenIDs(ids...)
 }
 
 // Where appends a list predicates to the GroupUpdate builder.
@@ -513,6 +631,51 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if guo.mutation.AccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.AccessTokensTable,
+			Columns: []string{group.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.RemovedAccessTokensIDs(); len(nodes) > 0 && !guo.mutation.AccessTokensCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.AccessTokensTable,
+			Columns: []string{group.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := guo.mutation.AccessTokensIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   group.AccessTokensTable,
+			Columns: []string{group.AccessTokensColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

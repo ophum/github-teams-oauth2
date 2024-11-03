@@ -170,6 +170,29 @@ func HasCodesWith(preds ...predicate.Code) predicate.User {
 	})
 }
 
+// HasAccessTokens applies the HasEdge predicate on the "access_tokens" edge.
+func HasAccessTokens() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, AccessTokensTable, AccessTokensColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasAccessTokensWith applies the HasEdge predicate on the "access_tokens" edge with a given conditions (other predicates).
+func HasAccessTokensWith(preds ...predicate.AccessToken) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newAccessTokensStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.User) predicate.User {
 	return predicate.User(sql.AndPredicates(predicates...))

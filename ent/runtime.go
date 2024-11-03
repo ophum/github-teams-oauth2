@@ -4,6 +4,7 @@ package ent
 
 import (
 	"github.com/google/uuid"
+	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
 	"github.com/ophum/github-teams-oauth2/ent/code"
 	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/schema"
@@ -14,8 +15,22 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	accesstokenFields := schema.AccessToken{}.Fields()
+	_ = accesstokenFields
+	// accesstokenDescID is the schema descriptor for id field.
+	accesstokenDescID := accesstokenFields[0].Descriptor()
+	// accesstoken.DefaultID holds the default value on creation for the id field.
+	accesstoken.DefaultID = accesstokenDescID.Default.(func() uuid.UUID)
 	codeFields := schema.Code{}.Fields()
 	_ = codeFields
+	// codeDescClientID is the schema descriptor for client_id field.
+	codeDescClientID := codeFields[2].Descriptor()
+	// code.DefaultClientID holds the default value on creation for the client_id field.
+	code.DefaultClientID = codeDescClientID.Default.(string)
+	// codeDescRedirectURI is the schema descriptor for redirect_uri field.
+	codeDescRedirectURI := codeFields[3].Descriptor()
+	// code.DefaultRedirectURI holds the default value on creation for the redirect_uri field.
+	code.DefaultRedirectURI = codeDescRedirectURI.Default.(string)
 	// codeDescID is the schema descriptor for id field.
 	codeDescID := codeFields[0].Descriptor()
 	// code.DefaultID holds the default value on creation for the id field.

@@ -10,18 +10,39 @@ import (
 var (
 	// AccessTokensColumns holds the columns for the "access_tokens" table.
 	AccessTokensColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID},
+		{Name: "token", Type: field.TypeString},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "group_access_tokens", Type: field.TypeUUID, Nullable: true},
+		{Name: "user_access_tokens", Type: field.TypeUUID, Nullable: true},
 	}
 	// AccessTokensTable holds the schema information for the "access_tokens" table.
 	AccessTokensTable = &schema.Table{
 		Name:       "access_tokens",
 		Columns:    AccessTokensColumns,
 		PrimaryKey: []*schema.Column{AccessTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "access_tokens_groups_access_tokens",
+				Columns:    []*schema.Column{AccessTokensColumns[3]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "access_tokens_users_access_tokens",
+				Columns:    []*schema.Column{AccessTokensColumns[4]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// CodesColumns holds the columns for the "codes" table.
 	CodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "code", Type: field.TypeString},
+		{Name: "client_id", Type: field.TypeString, Default: ""},
+		{Name: "redirect_uri", Type: field.TypeString, Default: ""},
+		{Name: "expires_at", Type: field.TypeTime},
 		{Name: "group_codes", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_codes", Type: field.TypeUUID, Nullable: true},
 	}
@@ -33,13 +54,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "codes_groups_codes",
-				Columns:    []*schema.Column{CodesColumns[2]},
+				Columns:    []*schema.Column{CodesColumns[5]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "codes_users_codes",
-				Columns:    []*schema.Column{CodesColumns[3]},
+				Columns:    []*schema.Column{CodesColumns[6]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -103,6 +124,8 @@ var (
 )
 
 func init() {
+	AccessTokensTable.ForeignKeys[0].RefTable = GroupsTable
+	AccessTokensTable.ForeignKeys[1].RefTable = UsersTable
 	CodesTable.ForeignKeys[0].RefTable = GroupsTable
 	CodesTable.ForeignKeys[1].RefTable = UsersTable
 	UserGroupsTable.ForeignKeys[0].RefTable = UsersTable

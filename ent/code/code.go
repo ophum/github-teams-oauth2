@@ -15,6 +15,12 @@ const (
 	FieldID = "id"
 	// FieldCode holds the string denoting the code field in the database.
 	FieldCode = "code"
+	// FieldClientID holds the string denoting the client_id field in the database.
+	FieldClientID = "client_id"
+	// FieldRedirectURI holds the string denoting the redirect_uri field in the database.
+	FieldRedirectURI = "redirect_uri"
+	// FieldExpiresAt holds the string denoting the expires_at field in the database.
+	FieldExpiresAt = "expires_at"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
 	// EdgeGroup holds the string denoting the group edge name in mutations.
@@ -41,6 +47,9 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldCode,
+	FieldClientID,
+	FieldRedirectURI,
+	FieldExpiresAt,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "codes"
@@ -66,6 +75,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultClientID holds the default value on creation for the "client_id" field.
+	DefaultClientID string
+	// DefaultRedirectURI holds the default value on creation for the "redirect_uri" field.
+	DefaultRedirectURI string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -81,6 +94,21 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByCode orders the results by the code field.
 func ByCode(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCode, opts...).ToFunc()
+}
+
+// ByClientID orders the results by the client_id field.
+func ByClientID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldClientID, opts...).ToFunc()
+}
+
+// ByRedirectURI orders the results by the redirect_uri field.
+func ByRedirectURI(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRedirectURI, opts...).ToFunc()
+}
+
+// ByExpiresAt orders the results by the expires_at field.
+func ByExpiresAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExpiresAt, opts...).ToFunc()
 }
 
 // ByUserField orders the results by user field.

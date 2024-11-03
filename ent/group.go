@@ -31,9 +31,11 @@ type GroupEdges struct {
 	Users []*User `json:"users,omitempty"`
 	// Codes holds the value of the codes edge.
 	Codes []*Code `json:"codes,omitempty"`
+	// AccessTokens holds the value of the access_tokens edge.
+	AccessTokens []*AccessToken `json:"access_tokens,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -52,6 +54,15 @@ func (e GroupEdges) CodesOrErr() ([]*Code, error) {
 		return e.Codes, nil
 	}
 	return nil, &NotLoadedError{edge: "codes"}
+}
+
+// AccessTokensOrErr returns the AccessTokens value or an error if the edge
+// was not loaded in eager-loading.
+func (e GroupEdges) AccessTokensOrErr() ([]*AccessToken, error) {
+	if e.loadedTypes[2] {
+		return e.AccessTokens, nil
+	}
+	return nil, &NotLoadedError{edge: "access_tokens"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -111,6 +122,11 @@ func (gr *Group) QueryUsers() *UserQuery {
 // QueryCodes queries the "codes" edge of the Group entity.
 func (gr *Group) QueryCodes() *CodeQuery {
 	return NewGroupClient(gr.config).QueryCodes(gr)
+}
+
+// QueryAccessTokens queries the "access_tokens" edge of the Group entity.
+func (gr *Group) QueryAccessTokens() *AccessTokenQuery {
+	return NewGroupClient(gr.config).QueryAccessTokens(gr)
 }
 
 // Update returns a builder for updating this Group.

@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -21,6 +22,12 @@ type Code struct {
 	ID uuid.UUID `json:"id,omitempty"`
 	// Code holds the value of the "code" field.
 	Code string `json:"code,omitempty"`
+	// ClientID holds the value of the "client_id" field.
+	ClientID string `json:"client_id,omitempty"`
+	// RedirectURI holds the value of the "redirect_uri" field.
+	RedirectURI string `json:"redirect_uri,omitempty"`
+	// ExpiresAt holds the value of the "expires_at" field.
+	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CodeQuery when eager-loading is set.
 	Edges        CodeEdges `json:"edges"`
@@ -67,8 +74,10 @@ func (*Code) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case code.FieldCode:
+		case code.FieldCode, code.FieldClientID, code.FieldRedirectURI:
 			values[i] = new(sql.NullString)
+		case code.FieldExpiresAt:
+			values[i] = new(sql.NullTime)
 		case code.FieldID:
 			values[i] = new(uuid.UUID)
 		case code.ForeignKeys[0]: // group_codes
@@ -101,6 +110,24 @@ func (c *Code) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field code", values[i])
 			} else if value.Valid {
 				c.Code = value.String
+			}
+		case code.FieldClientID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field client_id", values[i])
+			} else if value.Valid {
+				c.ClientID = value.String
+			}
+		case code.FieldRedirectURI:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field redirect_uri", values[i])
+			} else if value.Valid {
+				c.RedirectURI = value.String
+			}
+		case code.FieldExpiresAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field expires_at", values[i])
+			} else if value.Valid {
+				c.ExpiresAt = value.Time
 			}
 		case code.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -164,6 +191,15 @@ func (c *Code) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
 	builder.WriteString("code=")
 	builder.WriteString(c.Code)
+	builder.WriteString(", ")
+	builder.WriteString("client_id=")
+	builder.WriteString(c.ClientID)
+	builder.WriteString(", ")
+	builder.WriteString("redirect_uri=")
+	builder.WriteString(c.RedirectURI)
+	builder.WriteString(", ")
+	builder.WriteString("expires_at=")
+	builder.WriteString(c.ExpiresAt.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

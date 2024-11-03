@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -40,6 +41,48 @@ func (cu *CodeUpdate) SetCode(s string) *CodeUpdate {
 func (cu *CodeUpdate) SetNillableCode(s *string) *CodeUpdate {
 	if s != nil {
 		cu.SetCode(*s)
+	}
+	return cu
+}
+
+// SetClientID sets the "client_id" field.
+func (cu *CodeUpdate) SetClientID(s string) *CodeUpdate {
+	cu.mutation.SetClientID(s)
+	return cu
+}
+
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (cu *CodeUpdate) SetNillableClientID(s *string) *CodeUpdate {
+	if s != nil {
+		cu.SetClientID(*s)
+	}
+	return cu
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (cu *CodeUpdate) SetRedirectURI(s string) *CodeUpdate {
+	cu.mutation.SetRedirectURI(s)
+	return cu
+}
+
+// SetNillableRedirectURI sets the "redirect_uri" field if the given value is not nil.
+func (cu *CodeUpdate) SetNillableRedirectURI(s *string) *CodeUpdate {
+	if s != nil {
+		cu.SetRedirectURI(*s)
+	}
+	return cu
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (cu *CodeUpdate) SetExpiresAt(t time.Time) *CodeUpdate {
+	cu.mutation.SetExpiresAt(t)
+	return cu
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (cu *CodeUpdate) SetNillableExpiresAt(t *time.Time) *CodeUpdate {
+	if t != nil {
+		cu.SetExpiresAt(*t)
 	}
 	return cu
 }
@@ -138,6 +181,15 @@ func (cu *CodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := cu.mutation.Code(); ok {
 		_spec.SetField(code.FieldCode, field.TypeString, value)
 	}
+	if value, ok := cu.mutation.ClientID(); ok {
+		_spec.SetField(code.FieldClientID, field.TypeString, value)
+	}
+	if value, ok := cu.mutation.RedirectURI(); ok {
+		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
+	}
+	if value, ok := cu.mutation.ExpiresAt(); ok {
+		_spec.SetField(code.FieldExpiresAt, field.TypeTime, value)
+	}
 	if cu.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -226,6 +278,48 @@ func (cuo *CodeUpdateOne) SetCode(s string) *CodeUpdateOne {
 func (cuo *CodeUpdateOne) SetNillableCode(s *string) *CodeUpdateOne {
 	if s != nil {
 		cuo.SetCode(*s)
+	}
+	return cuo
+}
+
+// SetClientID sets the "client_id" field.
+func (cuo *CodeUpdateOne) SetClientID(s string) *CodeUpdateOne {
+	cuo.mutation.SetClientID(s)
+	return cuo
+}
+
+// SetNillableClientID sets the "client_id" field if the given value is not nil.
+func (cuo *CodeUpdateOne) SetNillableClientID(s *string) *CodeUpdateOne {
+	if s != nil {
+		cuo.SetClientID(*s)
+	}
+	return cuo
+}
+
+// SetRedirectURI sets the "redirect_uri" field.
+func (cuo *CodeUpdateOne) SetRedirectURI(s string) *CodeUpdateOne {
+	cuo.mutation.SetRedirectURI(s)
+	return cuo
+}
+
+// SetNillableRedirectURI sets the "redirect_uri" field if the given value is not nil.
+func (cuo *CodeUpdateOne) SetNillableRedirectURI(s *string) *CodeUpdateOne {
+	if s != nil {
+		cuo.SetRedirectURI(*s)
+	}
+	return cuo
+}
+
+// SetExpiresAt sets the "expires_at" field.
+func (cuo *CodeUpdateOne) SetExpiresAt(t time.Time) *CodeUpdateOne {
+	cuo.mutation.SetExpiresAt(t)
+	return cuo
+}
+
+// SetNillableExpiresAt sets the "expires_at" field if the given value is not nil.
+func (cuo *CodeUpdateOne) SetNillableExpiresAt(t *time.Time) *CodeUpdateOne {
+	if t != nil {
+		cuo.SetExpiresAt(*t)
 	}
 	return cuo
 }
@@ -353,6 +447,15 @@ func (cuo *CodeUpdateOne) sqlSave(ctx context.Context) (_node *Code, err error) 
 	}
 	if value, ok := cuo.mutation.Code(); ok {
 		_spec.SetField(code.FieldCode, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.ClientID(); ok {
+		_spec.SetField(code.FieldClientID, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.RedirectURI(); ok {
+		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.ExpiresAt(); ok {
+		_spec.SetField(code.FieldExpiresAt, field.TypeTime, value)
 	}
 	if cuo.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{

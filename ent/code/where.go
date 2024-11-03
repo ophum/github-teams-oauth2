@@ -3,6 +3,8 @@
 package code
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -57,6 +59,21 @@ func IDLTE(id uuid.UUID) predicate.Code {
 // Code applies equality check predicate on the "code" field. It's identical to CodeEQ.
 func Code(v string) predicate.Code {
 	return predicate.Code(sql.FieldEQ(FieldCode, v))
+}
+
+// ClientID applies equality check predicate on the "client_id" field. It's identical to ClientIDEQ.
+func ClientID(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldClientID, v))
+}
+
+// RedirectURI applies equality check predicate on the "redirect_uri" field. It's identical to RedirectURIEQ.
+func RedirectURI(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldRedirectURI, v))
+}
+
+// ExpiresAt applies equality check predicate on the "expires_at" field. It's identical to ExpiresAtEQ.
+func ExpiresAt(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldExpiresAt, v))
 }
 
 // CodeEQ applies the EQ predicate on the "code" field.
@@ -122,6 +139,176 @@ func CodeEqualFold(v string) predicate.Code {
 // CodeContainsFold applies the ContainsFold predicate on the "code" field.
 func CodeContainsFold(v string) predicate.Code {
 	return predicate.Code(sql.FieldContainsFold(FieldCode, v))
+}
+
+// ClientIDEQ applies the EQ predicate on the "client_id" field.
+func ClientIDEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldClientID, v))
+}
+
+// ClientIDNEQ applies the NEQ predicate on the "client_id" field.
+func ClientIDNEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldNEQ(FieldClientID, v))
+}
+
+// ClientIDIn applies the In predicate on the "client_id" field.
+func ClientIDIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldIn(FieldClientID, vs...))
+}
+
+// ClientIDNotIn applies the NotIn predicate on the "client_id" field.
+func ClientIDNotIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldNotIn(FieldClientID, vs...))
+}
+
+// ClientIDGT applies the GT predicate on the "client_id" field.
+func ClientIDGT(v string) predicate.Code {
+	return predicate.Code(sql.FieldGT(FieldClientID, v))
+}
+
+// ClientIDGTE applies the GTE predicate on the "client_id" field.
+func ClientIDGTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldGTE(FieldClientID, v))
+}
+
+// ClientIDLT applies the LT predicate on the "client_id" field.
+func ClientIDLT(v string) predicate.Code {
+	return predicate.Code(sql.FieldLT(FieldClientID, v))
+}
+
+// ClientIDLTE applies the LTE predicate on the "client_id" field.
+func ClientIDLTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldLTE(FieldClientID, v))
+}
+
+// ClientIDContains applies the Contains predicate on the "client_id" field.
+func ClientIDContains(v string) predicate.Code {
+	return predicate.Code(sql.FieldContains(FieldClientID, v))
+}
+
+// ClientIDHasPrefix applies the HasPrefix predicate on the "client_id" field.
+func ClientIDHasPrefix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasPrefix(FieldClientID, v))
+}
+
+// ClientIDHasSuffix applies the HasSuffix predicate on the "client_id" field.
+func ClientIDHasSuffix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasSuffix(FieldClientID, v))
+}
+
+// ClientIDEqualFold applies the EqualFold predicate on the "client_id" field.
+func ClientIDEqualFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldEqualFold(FieldClientID, v))
+}
+
+// ClientIDContainsFold applies the ContainsFold predicate on the "client_id" field.
+func ClientIDContainsFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldContainsFold(FieldClientID, v))
+}
+
+// RedirectURIEQ applies the EQ predicate on the "redirect_uri" field.
+func RedirectURIEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldRedirectURI, v))
+}
+
+// RedirectURINEQ applies the NEQ predicate on the "redirect_uri" field.
+func RedirectURINEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldNEQ(FieldRedirectURI, v))
+}
+
+// RedirectURIIn applies the In predicate on the "redirect_uri" field.
+func RedirectURIIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldIn(FieldRedirectURI, vs...))
+}
+
+// RedirectURINotIn applies the NotIn predicate on the "redirect_uri" field.
+func RedirectURINotIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldNotIn(FieldRedirectURI, vs...))
+}
+
+// RedirectURIGT applies the GT predicate on the "redirect_uri" field.
+func RedirectURIGT(v string) predicate.Code {
+	return predicate.Code(sql.FieldGT(FieldRedirectURI, v))
+}
+
+// RedirectURIGTE applies the GTE predicate on the "redirect_uri" field.
+func RedirectURIGTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldGTE(FieldRedirectURI, v))
+}
+
+// RedirectURILT applies the LT predicate on the "redirect_uri" field.
+func RedirectURILT(v string) predicate.Code {
+	return predicate.Code(sql.FieldLT(FieldRedirectURI, v))
+}
+
+// RedirectURILTE applies the LTE predicate on the "redirect_uri" field.
+func RedirectURILTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldLTE(FieldRedirectURI, v))
+}
+
+// RedirectURIContains applies the Contains predicate on the "redirect_uri" field.
+func RedirectURIContains(v string) predicate.Code {
+	return predicate.Code(sql.FieldContains(FieldRedirectURI, v))
+}
+
+// RedirectURIHasPrefix applies the HasPrefix predicate on the "redirect_uri" field.
+func RedirectURIHasPrefix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasPrefix(FieldRedirectURI, v))
+}
+
+// RedirectURIHasSuffix applies the HasSuffix predicate on the "redirect_uri" field.
+func RedirectURIHasSuffix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasSuffix(FieldRedirectURI, v))
+}
+
+// RedirectURIEqualFold applies the EqualFold predicate on the "redirect_uri" field.
+func RedirectURIEqualFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldEqualFold(FieldRedirectURI, v))
+}
+
+// RedirectURIContainsFold applies the ContainsFold predicate on the "redirect_uri" field.
+func RedirectURIContainsFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldContainsFold(FieldRedirectURI, v))
+}
+
+// ExpiresAtEQ applies the EQ predicate on the "expires_at" field.
+func ExpiresAtEQ(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldExpiresAt, v))
+}
+
+// ExpiresAtNEQ applies the NEQ predicate on the "expires_at" field.
+func ExpiresAtNEQ(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldNEQ(FieldExpiresAt, v))
+}
+
+// ExpiresAtIn applies the In predicate on the "expires_at" field.
+func ExpiresAtIn(vs ...time.Time) predicate.Code {
+	return predicate.Code(sql.FieldIn(FieldExpiresAt, vs...))
+}
+
+// ExpiresAtNotIn applies the NotIn predicate on the "expires_at" field.
+func ExpiresAtNotIn(vs ...time.Time) predicate.Code {
+	return predicate.Code(sql.FieldNotIn(FieldExpiresAt, vs...))
+}
+
+// ExpiresAtGT applies the GT predicate on the "expires_at" field.
+func ExpiresAtGT(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldGT(FieldExpiresAt, v))
+}
+
+// ExpiresAtGTE applies the GTE predicate on the "expires_at" field.
+func ExpiresAtGTE(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldGTE(FieldExpiresAt, v))
+}
+
+// ExpiresAtLT applies the LT predicate on the "expires_at" field.
+func ExpiresAtLT(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldLT(FieldExpiresAt, v))
+}
+
+// ExpiresAtLTE applies the LTE predicate on the "expires_at" field.
+func ExpiresAtLTE(v time.Time) predicate.Code {
+	return predicate.Code(sql.FieldLTE(FieldExpiresAt, v))
 }
 
 // HasUser applies the HasEdge predicate on the "user" edge.

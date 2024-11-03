@@ -25,5 +25,6 @@ func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("groups", Group.Type),
 		edge.To("codes", Code.Type),
+		edge.To("access_tokens", AccessToken.Type),
 	}
 }

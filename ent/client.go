@@ -289,7 +289,7 @@ func (c *AccessTokenClient) UpdateOne(at *AccessToken) *AccessTokenUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *AccessTokenClient) UpdateOneID(id int) *AccessTokenUpdateOne {
+func (c *AccessTokenClient) UpdateOneID(id uuid.UUID) *AccessTokenUpdateOne {
 	mutation := newAccessTokenMutation(c.config, OpUpdateOne, withAccessTokenID(id))
 	return &AccessTokenUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -306,7 +306,7 @@ func (c *AccessTokenClient) DeleteOne(at *AccessToken) *AccessTokenDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *AccessTokenClient) DeleteOneID(id int) *AccessTokenDeleteOne {
+func (c *AccessTokenClient) DeleteOneID(id uuid.UUID) *AccessTokenDeleteOne {
 	builder := c.Delete().Where(accesstoken.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -323,17 +323,49 @@ func (c *AccessTokenClient) Query() *AccessTokenQuery {
 }
 
 // Get returns a AccessToken entity by its id.
-func (c *AccessTokenClient) Get(ctx context.Context, id int) (*AccessToken, error) {
+func (c *AccessTokenClient) Get(ctx context.Context, id uuid.UUID) (*AccessToken, error) {
 	return c.Query().Where(accesstoken.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *AccessTokenClient) GetX(ctx context.Context, id int) *AccessToken {
+func (c *AccessTokenClient) GetX(ctx context.Context, id uuid.UUID) *AccessToken {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryUser queries the user edge of a AccessToken.
+func (c *AccessTokenClient) QueryUser(at *AccessToken) *UserQuery {
+	query := (&UserClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(accesstoken.Table, accesstoken.FieldID, id),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, accesstoken.UserTable, accesstoken.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGroup queries the group edge of a AccessToken.
+func (c *AccessTokenClient) QueryGroup(at *AccessToken) *GroupQuery {
+	query := (&GroupClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := at.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(accesstoken.Table, accesstoken.FieldID, id),
+			sqlgraph.To(group.Table, group.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, accesstoken.GroupTable, accesstoken.GroupColumn),
+		)
+		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.
@@ -666,6 +698,22 @@ func (c *GroupClient) QueryCodes(gr *Group) *CodeQuery {
 	return query
 }
 
+// QueryAccessTokens queries the access_tokens edge of a Group.
+func (c *GroupClient) QueryAccessTokens(gr *Group) *AccessTokenQuery {
+	query := (&AccessTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(group.Table, group.FieldID, id),
+			sqlgraph.To(accesstoken.Table, accesstoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, group.AccessTokensTable, group.AccessTokensColumn),
+		)
+		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *GroupClient) Hooks() []Hook {
 	return c.hooks.Group
@@ -824,6 +872,22 @@ func (c *UserClient) QueryCodes(u *User) *CodeQuery {
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(code.Table, code.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, user.CodesTable, user.CodesColumn),
+		)
+		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryAccessTokens queries the access_tokens edge of a User.
+func (c *UserClient) QueryAccessTokens(u *User) *AccessTokenQuery {
+	query := (&AccessTokenClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := u.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(user.Table, user.FieldID, id),
+			sqlgraph.To(accesstoken.Table, accesstoken.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, user.AccessTokensTable, user.AccessTokensColumn),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
