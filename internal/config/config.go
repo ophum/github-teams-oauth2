@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	Oauth2   Oauth2   `yaml:"oauth2"`
 	Github   Github   `yaml:"github"`
 	Database Database `yaml:"database"`
 	Session  Session  `yaml:"session"`
@@ -19,6 +20,11 @@ type Config struct {
 
 func (c *Config) SetDefault() {
 	c.Github.setDefault()
+}
+
+type Oauth2 struct {
+	ClientID     string `yaml:"clientID"`
+	ClientSecret string `yaml:"clientSecret"`
 }
 
 type Github struct {

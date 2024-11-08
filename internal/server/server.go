@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/subtle"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -120,8 +121,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid response_type")
 	}
 
-	// TODO: 設定ファイルorDBを参照したい
-	if req.ClientID != "test-client-id" {
+	if req.ClientID != s.config.Oauth2.ClientID {
 		return errors.New("invalid client_id'")
 	}
 	sess.Values["client_id"] = req.ClientID
@@ -348,6 +348,19 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 }
 
 func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
+	authzHeader := ctx.Request().Header.Get("Authorization")
+	basicUserPassword, ok := strings.CutPrefix(authzHeader, "Basic ")
+	if !ok {
+		basicUserPassword, ok = strings.CutPrefix(authzHeader, "basic ")
+		if !ok {
+			return echo.ErrUnauthorized
+		}
+	}
+
+	if subtle.ConstantTimeCompare([]byte(basicUserPassword), []byte(fmt.Sprintf("%s:%s", s.config.Oauth2.ClientID, s.config.Oauth2.ClientSecret))) == 0 {
+		return echo.ErrUnauthorized
+	}
+
 	var req struct {
 		GrantType   string `form:"grant_type"`
 		Code        string `form:"code"`
