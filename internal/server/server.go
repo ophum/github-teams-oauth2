@@ -132,11 +132,15 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 
 	userID, ok := sess.Values["user_id"].(string)
 	if !ok {
-		log.Println("unauthorized, begin github oatuth")
+		log.Println("unauthorized, begin github oauth")
 		return s.redirectGithubOAuth2(ctx, sess)
 	}
 	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
 	if err != nil {
+		if ent.IsNotFound(err) {
+			log.Println("unauthorized, begin github oauth")
+			return s.redirectGithubOAuth2(ctx, sess)
+		}
 		return err
 	}
 	groups, err := user.QueryGroups().All(ctx.Request().Context())
@@ -283,6 +287,10 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 		return err
 	}
 
+	githubName, err := s.getGithubUser(ctx.Request().Context(), token)
+	if err != nil {
+		return err
+	}
 	email, err := s.getGithubUserEmail(ctx.Request().Context(), token)
 	if err != nil {
 		return err
@@ -309,7 +317,8 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 		}
 
 		user, err = s.db.User.Create().
-			SetName(email).
+			SetName(githubName).
+			SetEmail(email).
 			Save(ctx.Request().Context())
 		if err != nil {
 			return err
@@ -466,6 +475,7 @@ func (s *Server) getUserinfoHandle(ctx echo.Context) error {
 
 	return ctx.JSON(http.StatusOK, map[string]any{
 		"username": user.Name,
+		"email":    user.Email,
 		"groups":   []string{group.Name},
 	})
 }
