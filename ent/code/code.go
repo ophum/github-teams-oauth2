@@ -17,6 +17,8 @@ const (
 	FieldCode = "code"
 	// FieldClientID holds the string denoting the client_id field in the database.
 	FieldClientID = "client_id"
+	// FieldScope holds the string denoting the scope field in the database.
+	FieldScope = "scope"
 	// FieldRedirectURI holds the string denoting the redirect_uri field in the database.
 	FieldRedirectURI = "redirect_uri"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
@@ -48,6 +50,7 @@ var Columns = []string{
 	FieldID,
 	FieldCode,
 	FieldClientID,
+	FieldScope,
 	FieldRedirectURI,
 	FieldExpiresAt,
 }
@@ -77,6 +80,8 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultClientID holds the default value on creation for the "client_id" field.
 	DefaultClientID string
+	// DefaultScope holds the default value on creation for the "scope" field.
+	DefaultScope string
 	// DefaultRedirectURI holds the default value on creation for the "redirect_uri" field.
 	DefaultRedirectURI string
 	// DefaultID holds the default value on creation for the "id" field.
@@ -99,6 +104,11 @@ func ByCode(opts ...sql.OrderTermOption) OrderOption {
 // ByClientID orders the results by the client_id field.
 func ByClientID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldClientID, opts...).ToFunc()
+}
+
+// ByScope orders the results by the scope field.
+func ByScope(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScope, opts...).ToFunc()
 }
 
 // ByRedirectURI orders the results by the redirect_uri field.

@@ -66,6 +66,11 @@ func ClientID(v string) predicate.Code {
 	return predicate.Code(sql.FieldEQ(FieldClientID, v))
 }
 
+// Scope applies equality check predicate on the "scope" field. It's identical to ScopeEQ.
+func Scope(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldScope, v))
+}
+
 // RedirectURI applies equality check predicate on the "redirect_uri" field. It's identical to RedirectURIEQ.
 func RedirectURI(v string) predicate.Code {
 	return predicate.Code(sql.FieldEQ(FieldRedirectURI, v))
@@ -204,6 +209,71 @@ func ClientIDEqualFold(v string) predicate.Code {
 // ClientIDContainsFold applies the ContainsFold predicate on the "client_id" field.
 func ClientIDContainsFold(v string) predicate.Code {
 	return predicate.Code(sql.FieldContainsFold(FieldClientID, v))
+}
+
+// ScopeEQ applies the EQ predicate on the "scope" field.
+func ScopeEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldScope, v))
+}
+
+// ScopeNEQ applies the NEQ predicate on the "scope" field.
+func ScopeNEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldNEQ(FieldScope, v))
+}
+
+// ScopeIn applies the In predicate on the "scope" field.
+func ScopeIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldIn(FieldScope, vs...))
+}
+
+// ScopeNotIn applies the NotIn predicate on the "scope" field.
+func ScopeNotIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldNotIn(FieldScope, vs...))
+}
+
+// ScopeGT applies the GT predicate on the "scope" field.
+func ScopeGT(v string) predicate.Code {
+	return predicate.Code(sql.FieldGT(FieldScope, v))
+}
+
+// ScopeGTE applies the GTE predicate on the "scope" field.
+func ScopeGTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldGTE(FieldScope, v))
+}
+
+// ScopeLT applies the LT predicate on the "scope" field.
+func ScopeLT(v string) predicate.Code {
+	return predicate.Code(sql.FieldLT(FieldScope, v))
+}
+
+// ScopeLTE applies the LTE predicate on the "scope" field.
+func ScopeLTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldLTE(FieldScope, v))
+}
+
+// ScopeContains applies the Contains predicate on the "scope" field.
+func ScopeContains(v string) predicate.Code {
+	return predicate.Code(sql.FieldContains(FieldScope, v))
+}
+
+// ScopeHasPrefix applies the HasPrefix predicate on the "scope" field.
+func ScopeHasPrefix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasPrefix(FieldScope, v))
+}
+
+// ScopeHasSuffix applies the HasSuffix predicate on the "scope" field.
+func ScopeHasSuffix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasSuffix(FieldScope, v))
+}
+
+// ScopeEqualFold applies the EqualFold predicate on the "scope" field.
+func ScopeEqualFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldEqualFold(FieldScope, v))
+}
+
+// ScopeContainsFold applies the ContainsFold predicate on the "scope" field.
+func ScopeContainsFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldContainsFold(FieldScope, v))
 }
 
 // RedirectURIEQ applies the EQ predicate on the "redirect_uri" field.

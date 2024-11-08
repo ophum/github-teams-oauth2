@@ -27,8 +27,12 @@ func init() {
 	codeDescClientID := codeFields[2].Descriptor()
 	// code.DefaultClientID holds the default value on creation for the client_id field.
 	code.DefaultClientID = codeDescClientID.Default.(string)
+	// codeDescScope is the schema descriptor for scope field.
+	codeDescScope := codeFields[3].Descriptor()
+	// code.DefaultScope holds the default value on creation for the scope field.
+	code.DefaultScope = codeDescScope.Default.(string)
 	// codeDescRedirectURI is the schema descriptor for redirect_uri field.
-	codeDescRedirectURI := codeFields[3].Descriptor()
+	codeDescRedirectURI := codeFields[4].Descriptor()
 	// code.DefaultRedirectURI holds the default value on creation for the redirect_uri field.
 	code.DefaultRedirectURI = codeDescRedirectURI.Default.(string)
 	// codeDescID is the schema descriptor for id field.

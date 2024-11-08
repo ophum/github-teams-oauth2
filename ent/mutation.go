@@ -554,6 +554,7 @@ type CodeMutation struct {
 	id            *uuid.UUID
 	code          *string
 	client_id     *string
+	scope         *string
 	redirect_uri  *string
 	expires_at    *time.Time
 	clearedFields map[string]struct{}
@@ -742,6 +743,42 @@ func (m *CodeMutation) ResetClientID() {
 	m.client_id = nil
 }
 
+// SetScope sets the "scope" field.
+func (m *CodeMutation) SetScope(s string) {
+	m.scope = &s
+}
+
+// Scope returns the value of the "scope" field in the mutation.
+func (m *CodeMutation) Scope() (r string, exists bool) {
+	v := m.scope
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScope returns the old "scope" field's value of the Code entity.
+// If the Code object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CodeMutation) OldScope(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScope is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScope requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScope: %w", err)
+	}
+	return oldValue.Scope, nil
+}
+
+// ResetScope resets all changes to the "scope" field.
+func (m *CodeMutation) ResetScope() {
+	m.scope = nil
+}
+
 // SetRedirectURI sets the "redirect_uri" field.
 func (m *CodeMutation) SetRedirectURI(s string) {
 	m.redirect_uri = &s
@@ -926,12 +963,15 @@ func (m *CodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CodeMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 5)
 	if m.code != nil {
 		fields = append(fields, code.FieldCode)
 	}
 	if m.client_id != nil {
 		fields = append(fields, code.FieldClientID)
+	}
+	if m.scope != nil {
+		fields = append(fields, code.FieldScope)
 	}
 	if m.redirect_uri != nil {
 		fields = append(fields, code.FieldRedirectURI)
@@ -951,6 +991,8 @@ func (m *CodeMutation) Field(name string) (ent.Value, bool) {
 		return m.Code()
 	case code.FieldClientID:
 		return m.ClientID()
+	case code.FieldScope:
+		return m.Scope()
 	case code.FieldRedirectURI:
 		return m.RedirectURI()
 	case code.FieldExpiresAt:
@@ -968,6 +1010,8 @@ func (m *CodeMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldCode(ctx)
 	case code.FieldClientID:
 		return m.OldClientID(ctx)
+	case code.FieldScope:
+		return m.OldScope(ctx)
 	case code.FieldRedirectURI:
 		return m.OldRedirectURI(ctx)
 	case code.FieldExpiresAt:
@@ -994,6 +1038,13 @@ func (m *CodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetClientID(v)
+		return nil
+	case code.FieldScope:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScope(v)
 		return nil
 	case code.FieldRedirectURI:
 		v, ok := value.(string)
@@ -1063,6 +1114,9 @@ func (m *CodeMutation) ResetField(name string) error {
 		return nil
 	case code.FieldClientID:
 		m.ResetClientID()
+		return nil
+	case code.FieldScope:
+		m.ResetScope()
 		return nil
 	case code.FieldRedirectURI:
 		m.ResetRedirectURI()
