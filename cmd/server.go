@@ -25,6 +25,7 @@ to quickly create a Cobra application.`,
 		return viper.Unmarshal(&conf)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		conf.SetDefault()
 		s, err := server.New(&conf)
 		if err != nil {
 			return err

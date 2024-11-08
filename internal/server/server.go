@@ -2,6 +2,7 @@ package server
 
 import (
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -126,6 +127,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	}
 	sess.Values["client_id"] = req.ClientID
 	sess.Values["state"] = req.State
+	sess.Values["redirect_uri"] = req.RedirectURI
 	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
 		return err
 	}
@@ -213,6 +215,11 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("client_id not found'")
 	}
 
+	redirectURI, ok := sess.Values["redirect_uri"].(string)
+	if !ok {
+		return errors.New("invalid redirect_uri")
+	}
+
 	userID := sess.Values["user_id"].(string)
 	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
 	if err != nil {
@@ -255,12 +262,12 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		break
 	}
 
-	redirectURI, _ := url.Parse("http://localhost:8080/")
-	q := redirectURI.Query()
+	r, _ := url.Parse(redirectURI)
+	q := r.Query()
 	q.Set("code", c)
 	q.Set("state", state)
-	redirectURI.RawQuery = q.Encode()
-	return ctx.Redirect(http.StatusFound, redirectURI.String())
+	r.RawQuery = q.Encode()
+	return ctx.Redirect(http.StatusFound, r.String())
 }
 
 func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
@@ -369,7 +376,10 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		}
 	}
 
-	if subtle.ConstantTimeCompare([]byte(basicUserPassword), []byte(fmt.Sprintf("%s:%s", s.config.Oauth2.ClientID, s.config.Oauth2.ClientSecret))) == 0 {
+	encoded := base64.StdEncoding.EncodeToString([]byte(
+		url.QueryEscape(s.config.Oauth2.ClientID) + ":" + url.QueryEscape(s.config.Oauth2.ClientSecret),
+	))
+	if subtle.ConstantTimeCompare([]byte(basicUserPassword), []byte(encoded)) == 0 {
 		return echo.ErrUnauthorized
 	}
 
@@ -392,9 +402,11 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		return err
 	}
 
-	if code.ClientID != req.ClientID {
-		return errors.New("invalid client_id")
-	}
+	// ↑でBasic認証(confidential)を行っているのでclient_idを見る必要がない
+	// 逆にBasic認証を不要とする場合(public)は見る必要がある
+	//if code.ClientID != req.ClientID {
+	//	return errors.New("invalid client_id")
+	//}
 
 	if code.RedirectURI != "" && code.RedirectURI == req.RedirectURI {
 		return errors.New("invalid redirect_uri")
