@@ -18,6 +18,7 @@ func (Code) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New),
 		field.String("code"),
 		field.String("client_id").Default(""),
+		field.String("scope").Default(""),
 		field.String("redirect_uri").Default(""),
 		field.Time("expires_at"),
 	}

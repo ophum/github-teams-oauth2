@@ -24,6 +24,8 @@ type Code struct {
 	Code string `json:"code,omitempty"`
 	// ClientID holds the value of the "client_id" field.
 	ClientID string `json:"client_id,omitempty"`
+	// Scope holds the value of the "scope" field.
+	Scope string `json:"scope,omitempty"`
 	// RedirectURI holds the value of the "redirect_uri" field.
 	RedirectURI string `json:"redirect_uri,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
@@ -74,7 +76,7 @@ func (*Code) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case code.FieldCode, code.FieldClientID, code.FieldRedirectURI:
+		case code.FieldCode, code.FieldClientID, code.FieldScope, code.FieldRedirectURI:
 			values[i] = new(sql.NullString)
 		case code.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
@@ -116,6 +118,12 @@ func (c *Code) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field client_id", values[i])
 			} else if value.Valid {
 				c.ClientID = value.String
+			}
+		case code.FieldScope:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field scope", values[i])
+			} else if value.Valid {
+				c.Scope = value.String
 			}
 		case code.FieldRedirectURI:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -194,6 +202,9 @@ func (c *Code) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("client_id=")
 	builder.WriteString(c.ClientID)
+	builder.WriteString(", ")
+	builder.WriteString("scope=")
+	builder.WriteString(c.Scope)
 	builder.WriteString(", ")
 	builder.WriteString("redirect_uri=")
 	builder.WriteString(c.RedirectURI)

@@ -46,6 +46,20 @@ func (cc *CodeCreate) SetNillableClientID(s *string) *CodeCreate {
 	return cc
 }
 
+// SetScope sets the "scope" field.
+func (cc *CodeCreate) SetScope(s string) *CodeCreate {
+	cc.mutation.SetScope(s)
+	return cc
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (cc *CodeCreate) SetNillableScope(s *string) *CodeCreate {
+	if s != nil {
+		cc.SetScope(*s)
+	}
+	return cc
+}
+
 // SetRedirectURI sets the "redirect_uri" field.
 func (cc *CodeCreate) SetRedirectURI(s string) *CodeCreate {
 	cc.mutation.SetRedirectURI(s)
@@ -157,6 +171,10 @@ func (cc *CodeCreate) defaults() {
 		v := code.DefaultClientID
 		cc.mutation.SetClientID(v)
 	}
+	if _, ok := cc.mutation.Scope(); !ok {
+		v := code.DefaultScope
+		cc.mutation.SetScope(v)
+	}
 	if _, ok := cc.mutation.RedirectURI(); !ok {
 		v := code.DefaultRedirectURI
 		cc.mutation.SetRedirectURI(v)
@@ -174,6 +192,9 @@ func (cc *CodeCreate) check() error {
 	}
 	if _, ok := cc.mutation.ClientID(); !ok {
 		return &ValidationError{Name: "client_id", err: errors.New(`ent: missing required field "Code.client_id"`)}
+	}
+	if _, ok := cc.mutation.Scope(); !ok {
+		return &ValidationError{Name: "scope", err: errors.New(`ent: missing required field "Code.scope"`)}
 	}
 	if _, ok := cc.mutation.RedirectURI(); !ok {
 		return &ValidationError{Name: "redirect_uri", err: errors.New(`ent: missing required field "Code.redirect_uri"`)}
@@ -224,6 +245,10 @@ func (cc *CodeCreate) createSpec() (*Code, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.ClientID(); ok {
 		_spec.SetField(code.FieldClientID, field.TypeString, value)
 		_node.ClientID = value
+	}
+	if value, ok := cc.mutation.Scope(); ok {
+		_spec.SetField(code.FieldScope, field.TypeString, value)
+		_node.Scope = value
 	}
 	if value, ok := cc.mutation.RedirectURI(); ok {
 		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
@@ -343,6 +368,18 @@ func (u *CodeUpsert) UpdateClientID() *CodeUpsert {
 	return u
 }
 
+// SetScope sets the "scope" field.
+func (u *CodeUpsert) SetScope(v string) *CodeUpsert {
+	u.Set(code.FieldScope, v)
+	return u
+}
+
+// UpdateScope sets the "scope" field to the value that was provided on create.
+func (u *CodeUpsert) UpdateScope() *CodeUpsert {
+	u.SetExcluded(code.FieldScope)
+	return u
+}
+
 // SetRedirectURI sets the "redirect_uri" field.
 func (u *CodeUpsert) SetRedirectURI(v string) *CodeUpsert {
 	u.Set(code.FieldRedirectURI, v)
@@ -440,6 +477,20 @@ func (u *CodeUpsertOne) SetClientID(v string) *CodeUpsertOne {
 func (u *CodeUpsertOne) UpdateClientID() *CodeUpsertOne {
 	return u.Update(func(s *CodeUpsert) {
 		s.UpdateClientID()
+	})
+}
+
+// SetScope sets the "scope" field.
+func (u *CodeUpsertOne) SetScope(v string) *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetScope(v)
+	})
+}
+
+// UpdateScope sets the "scope" field to the value that was provided on create.
+func (u *CodeUpsertOne) UpdateScope() *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateScope()
 	})
 }
 
@@ -711,6 +762,20 @@ func (u *CodeUpsertBulk) SetClientID(v string) *CodeUpsertBulk {
 func (u *CodeUpsertBulk) UpdateClientID() *CodeUpsertBulk {
 	return u.Update(func(s *CodeUpsert) {
 		s.UpdateClientID()
+	})
+}
+
+// SetScope sets the "scope" field.
+func (u *CodeUpsertBulk) SetScope(v string) *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetScope(v)
+	})
+}
+
+// UpdateScope sets the "scope" field to the value that was provided on create.
+func (u *CodeUpsertBulk) UpdateScope() *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateScope()
 	})
 }
 

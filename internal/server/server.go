@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/gob"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -111,6 +113,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	var req struct {
 		ResponseType string `query:"response_type"`
 		ClientID     string `query:"client_id"`
+		Scope        string `query:"scope"`
 		RedirectURI  string `query:"redirect_uri"`
 		State        string `query:"state"`
 	}
@@ -125,9 +128,18 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	if req.ClientID != s.config.Oauth2.ClientID {
 		return errors.New("invalid client_id'")
 	}
+
+	scopes := strings.Split(req.Scope, " ")
+	scopes = slices.DeleteFunc(scopes, func(scope string) bool {
+		return !slices.Contains([]string{
+			"openid",
+		}, scope)
+	})
+
 	sess.Values["client_id"] = req.ClientID
 	sess.Values["state"] = req.State
 	sess.Values["redirect_uri"] = req.RedirectURI
+	sess.Values["scopes"] = scopes
 	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
 		return err
 	}
@@ -220,6 +232,11 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid redirect_uri")
 	}
 
+	scopes, ok := sess.Values["scopes"].([]string)
+	if !ok {
+		return errors.New("invalid scopes")
+	}
+
 	userID := sess.Values["user_id"].(string)
 	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
 	if err != nil {
@@ -256,6 +273,7 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 			SetCode(c).
 			SetExpiresAt(time.Now().Add(time.Minute)).
 			SetClientID(clientID).
+			SetScope(strings.Join(scopes, " ")).
 			Save(ctx.Request().Context()); err != nil {
 			return err
 		}
@@ -453,12 +471,37 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		break
 	}
 
-	return ctx.JSON(http.StatusOK, map[string]any{
+	scopes := strings.Split(code.Scope, " ")
+
+	ret := map[string]any{
 		"access_token":  token.Token,
 		"token_type":    "bearer",
 		"expires_in":    3600,
 		"refresh_token": "",
-	})
+	}
+
+	if slices.Contains(scopes, "openid") {
+		hash := sha256.Sum256([]byte(token.Token))
+		atHash := base64.StdEncoding.EncodeToString(hash[:16])
+		idToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"iss":      "http://localhost:8080",
+			"at_hash":  atHash,
+			"sub":      user.ID,
+			"aud":      []string{},
+			"exp":      time.Now().Add(time.Hour).Unix(),
+			"iat":      time.Now().Unix(),
+			"username": user.Name,
+			"email":    user.Email,
+			"groups": []string{
+				group.Name,
+			},
+		})
+		ret["id_token"], err = idToken.SignedString([]byte("secret"))
+		if err != nil {
+			return err
+		}
+	}
+	return ctx.JSON(http.StatusOK, ret)
 }
 
 func (s *Server) getUserinfoHandle(ctx echo.Context) error {

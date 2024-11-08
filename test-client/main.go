@@ -21,6 +21,9 @@ func main() {
 			TokenURL: "http://localhost:8080/oauth2/token",
 		},
 		RedirectURL: "http://localhost:8081/oauth2/callback",
+		Scopes: []string{
+			"openid",
+		},
 	}
 
 	state := uuid.Must(uuid.NewRandom())
@@ -44,6 +47,8 @@ func main() {
 			log.Fatal(err)
 		}
 
+		idToken := token.Extra("id_token")
+		fmt.Println("id_token:", idToken)
 		c := conf.Client(r.Context(), token)
 		resp, err := c.Get("http://localhost:8080/userinfo")
 		if err != nil {

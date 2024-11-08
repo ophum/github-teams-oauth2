@@ -59,6 +59,20 @@ func (cu *CodeUpdate) SetNillableClientID(s *string) *CodeUpdate {
 	return cu
 }
 
+// SetScope sets the "scope" field.
+func (cu *CodeUpdate) SetScope(s string) *CodeUpdate {
+	cu.mutation.SetScope(s)
+	return cu
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (cu *CodeUpdate) SetNillableScope(s *string) *CodeUpdate {
+	if s != nil {
+		cu.SetScope(*s)
+	}
+	return cu
+}
+
 // SetRedirectURI sets the "redirect_uri" field.
 func (cu *CodeUpdate) SetRedirectURI(s string) *CodeUpdate {
 	cu.mutation.SetRedirectURI(s)
@@ -184,6 +198,9 @@ func (cu *CodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := cu.mutation.ClientID(); ok {
 		_spec.SetField(code.FieldClientID, field.TypeString, value)
 	}
+	if value, ok := cu.mutation.Scope(); ok {
+		_spec.SetField(code.FieldScope, field.TypeString, value)
+	}
 	if value, ok := cu.mutation.RedirectURI(); ok {
 		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
 	}
@@ -292,6 +309,20 @@ func (cuo *CodeUpdateOne) SetClientID(s string) *CodeUpdateOne {
 func (cuo *CodeUpdateOne) SetNillableClientID(s *string) *CodeUpdateOne {
 	if s != nil {
 		cuo.SetClientID(*s)
+	}
+	return cuo
+}
+
+// SetScope sets the "scope" field.
+func (cuo *CodeUpdateOne) SetScope(s string) *CodeUpdateOne {
+	cuo.mutation.SetScope(s)
+	return cuo
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (cuo *CodeUpdateOne) SetNillableScope(s *string) *CodeUpdateOne {
+	if s != nil {
+		cuo.SetScope(*s)
 	}
 	return cuo
 }
@@ -450,6 +481,9 @@ func (cuo *CodeUpdateOne) sqlSave(ctx context.Context) (_node *Code, err error) 
 	}
 	if value, ok := cuo.mutation.ClientID(); ok {
 		_spec.SetField(code.FieldClientID, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.Scope(); ok {
+		_spec.SetField(code.FieldScope, field.TypeString, value)
 	}
 	if value, ok := cuo.mutation.RedirectURI(); ok {
 		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
