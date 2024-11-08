@@ -11,7 +11,7 @@ import (
 func (s *Server) getGithubUserEmail(ctx context.Context, token *oauth2.Token) (string, error) {
 	client := s.oauth2Config.Client(ctx, token)
 
-	resp, err := client.Get("https://api.github.com/user/emails")
+	resp, err := client.Get(s.config.Github.APIBaseURL + "/user/emails")
 	if err != nil {
 		return "", err
 	}
@@ -36,7 +36,7 @@ func (s *Server) getGithubUserEmail(ctx context.Context, token *oauth2.Token) (s
 
 func (s *Server) getGithubOrgTeams(ctx context.Context, token *oauth2.Token) (map[string][]string, error) {
 	client := s.oauth2Config.Client(ctx, token)
-	resp, err := client.Get("https://api.github.com/user/teams")
+	resp, err := client.Get(s.config.Github.APIBaseURL + "/user/teams")
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (s *Server) getGithubOrgTeams(ctx context.Context, token *oauth2.Token) (ma
 
 	orgTeams := map[string][]string{}
 	for _, team := range res {
-		orgTeams[team.Slug] = append(orgTeams[team.Slug], team.Organization.Login)
+		orgTeams[team.Organization.Login] = append(orgTeams[team.Organization.Login], team.Slug)
 	}
 	return orgTeams, nil
 }

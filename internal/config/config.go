@@ -17,10 +17,33 @@ type Config struct {
 	Session  Session  `yaml:"session"`
 }
 
+func (c *Config) SetDefault() {
+	c.Github.setDefault()
+}
+
 type Github struct {
-	ClientID     string `yaml:"clientID"`
-	ClientSecret string `yaml:"clientSecret"`
-	RedirectURL  string `yaml:"redirectURL"`
+	ClientID      string `yaml:"clientID"`
+	ClientSecret  string `yaml:"clientSecret"`
+	RedirectURL   string `yaml:"redirectURL"`
+	APIBaseURL    string `yaml:"apiBaseURL"`
+	AuthURL       string `yaml:"authURL"`
+	TokenURL      string `yaml:"tokenURL"`
+	DeviceAuthURL string `yaml:"deviceAuthURL"`
+}
+
+func (g *Github) setDefault() {
+	if g.APIBaseURL == "" {
+		g.APIBaseURL = "https://api.github.com"
+	}
+	if g.AuthURL == "" {
+		g.AuthURL = github.Endpoint.AuthURL
+	}
+	if g.TokenURL == "" {
+		g.TokenURL = github.Endpoint.TokenURL
+	}
+	if g.DeviceAuthURL == "" {
+		g.DeviceAuthURL = github.Endpoint.DeviceAuthURL
+	}
 }
 
 func (g Github) OAuth2Config() *oauth2.Config {
@@ -32,7 +55,11 @@ func (g Github) OAuth2Config() *oauth2.Config {
 			"user:email",
 			"read:org",
 		},
-		Endpoint: github.Endpoint,
+		Endpoint: oauth2.Endpoint{
+			AuthURL:       g.AuthURL,
+			TokenURL:      g.TokenURL,
+			DeviceAuthURL: g.DeviceAuthURL,
+		},
 	}
 }
 

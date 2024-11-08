@@ -42,6 +42,7 @@ func (t *Template) Render(w io.Writer, name string, data any, c echo.Context) er
 
 type Server struct {
 	db           *ent.Client
+	config       *config.Config
 	sessionStore *redistore.RediStore
 	oauth2Config *oauth2.Config
 }
@@ -58,6 +59,7 @@ func New(conf *config.Config) (*Server, error) {
 
 	return &Server{
 		db:           db,
+		config:       conf,
 		sessionStore: store,
 		oauth2Config: conf.Github.OAuth2Config(),
 	}, nil
