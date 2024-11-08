@@ -477,6 +477,7 @@ func (s *Server) getUserinfoHandle(ctx echo.Context) error {
 	}
 
 	return ctx.JSON(http.StatusOK, map[string]any{
+		"id":       user.ID.String(),
 		"username": user.Name,
 		"email":    user.Email,
 		"groups":   []string{group.Name},
