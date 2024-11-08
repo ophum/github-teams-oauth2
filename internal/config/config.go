@@ -28,13 +28,14 @@ type Oauth2 struct {
 }
 
 type Github struct {
-	ClientID      string `yaml:"clientID"`
-	ClientSecret  string `yaml:"clientSecret"`
-	RedirectURL   string `yaml:"redirectURL"`
-	APIBaseURL    string `yaml:"apiBaseURL"`
-	AuthURL       string `yaml:"authURL"`
-	TokenURL      string `yaml:"tokenURL"`
-	DeviceAuthURL string `yaml:"deviceAuthURL"`
+	ClientID          string   `yaml:"clientID"`
+	ClientSecret      string   `yaml:"clientSecret"`
+	RedirectURL       string   `yaml:"redirectURL"`
+	APIBaseURL        string   `yaml:"apiBaseURL"`
+	AuthURL           string   `yaml:"authURL"`
+	TokenURL          string   `yaml:"tokenURL"`
+	DeviceAuthURL     string   `yaml:"deviceAuthURL"`
+	AvailableOrgTeams []string `yaml:"availableOrgTeams"`
 }
 
 func (g *Github) setDefault() {

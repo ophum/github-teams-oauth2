@@ -308,6 +308,9 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 		}
 	}
 
+	ret = slices.DeleteFunc(ret, func(v string) bool {
+		return !slices.Contains(s.config.Github.AvailableOrgTeams, v)
+	})
 	slices.Sort(ret)
 
 	user, err := s.db.User.Query().Where(user.Name(email)).First(ctx.Request().Context())
