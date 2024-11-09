@@ -12,6 +12,7 @@
 <form action="/oauth2/authorize" method="POST">
     <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
     <input type="hidden" name="request_id" value="{{ .RequestID }}">
+    {{ if .IsGroups }}
     {{ range .Groups }}
     <div>
         <label>
@@ -19,6 +20,7 @@
             {{ .Name }}
         </label>
     </div>
+    {{ end }}
     {{ end }}
     <button type="submit">認可</button>
 </form>

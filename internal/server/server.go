@@ -123,22 +123,28 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid client_id'")
 	}
 
-	userID, ok := sess.Values["user_id"].(string)
-	if !ok {
-		log.Println("unauthorized, begin github oauth")
-		return s.redirectGithubOAuth2(ctx, sess)
-	}
-	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
+	user, err := getAuthUser(ctx, s.db)
 	if err != nil {
-		if ent.IsNotFound(err) {
+		if errors.Is(err, echo.ErrUnauthorized) {
 			log.Println("unauthorized, begin github oauth")
 			return s.redirectGithubOAuth2(ctx, sess)
 		}
 		return err
 	}
-	groups, err := user.QueryGroups().All(ctx.Request().Context())
-	if err != nil {
-		return err
+
+	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
+		"openid",
+		"groups",
+	})
+
+	isGroups := slices.Contains(scopes, "groups")
+
+	var groups []*ent.Group
+	if isGroups {
+		groups, err = user.QueryGroups().All(ctx.Request().Context())
+		if err != nil {
+			return err
+		}
 	}
 
 	requestID, err := randomString(16)
@@ -162,6 +168,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		"User":      user,
 		"Groups":    groups,
 		"RequestID": requestID,
+		"IsGroups":  isGroups,
 	})
 }
 
@@ -222,21 +229,27 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	if exists, err := user.QueryGroups().
-		Where(group.IDIn(req.GroupIDs...)).
-		Exist(ctx.Request().Context()); err != nil {
-		return err
-	} else if !exists {
-		return errors.New("invalid group")
-	}
-
 	scopes := excludeInvalidScopes(strings.Split(beginReq.Scope, " "), []string{
 		"openid",
+		"groups",
 	})
+
+	var groupIDs []uuid.UUID
+	if slices.Contains(scopes, "groups") {
+		groupIDs = req.GroupIDs
+
+		if exists, err := user.QueryGroups().
+			Where(group.IDIn(req.GroupIDs...)).
+			Exist(ctx.Request().Context()); err != nil {
+			return err
+		} else if !exists {
+			return errors.New("invalid group")
+		}
+	}
 
 	code, err := createCode(ctx.Request().Context(), s.db,
 		user.ID,
-		req.GroupIDs,
+		groupIDs,
 		beginReq.ClientID,
 		strings.Join(scopes, " "),
 	)
@@ -324,7 +337,7 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 	if slices.Contains(scopes, "openid") {
 		hash := sha256.Sum256([]byte(token.Token))
 		atHash := base64.StdEncoding.EncodeToString(hash[:16])
-		idToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		claims := jwt.MapClaims{
 			"iss":      "http://localhost:8080",
 			"at_hash":  atHash,
 			"sub":      user.ID,
@@ -333,10 +346,14 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 			"iat":      time.Now().Unix(),
 			"username": user.Name,
 			"email":    user.Email,
-			"groups": slicesMap(groups, func(v *ent.Group) string {
+		}
+		if slices.Contains(scopes, "groups") {
+			claims["groups"] = slicesMap(groups, func(v *ent.Group) string {
 				return v.Name
-			}),
-		})
+			})
+		}
+		idToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
 		ret["id_token"], err = idToken.SignedString([]byte("secret"))
 		if err != nil {
 			return err
@@ -368,12 +385,15 @@ func (s *Server) getUserinfoHandle(ctx echo.Context) error {
 		return err
 	}
 
-	return ctx.JSON(http.StatusOK, map[string]any{
+	ret := map[string]any{
 		"id":       user.ID.String(),
 		"username": user.Name,
 		"email":    user.Email,
-		"groups": slicesMap(groups, func(v *ent.Group) string {
+	}
+	if len(groups) > 0 {
+		ret["groups"] = slicesMap(groups, func(v *ent.Group) string {
 			return v.Name
-		}),
-	})
+		})
+	}
+	return ctx.JSON(http.StatusOK, ret)
 }

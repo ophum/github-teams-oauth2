@@ -29,6 +29,7 @@ func main() {
 		RedirectURL: "http://localhost:" + port + "/oauth2/callback",
 		Scopes: []string{
 			"openid",
+			"groups",
 		},
 	}
 

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/ophum/github-teams-oauth2/ent"
@@ -150,4 +151,25 @@ func slicesMap[T, E any](s []T, f func(v T) E) []E {
 		r = append(r, f(v))
 	}
 	return r
+}
+
+func getAuthUser(ctx echo.Context, db *ent.Client) (*ent.User, error) {
+	sess, err := session.Get("session", ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	userID, ok := sess.Values["user_id"].(string)
+	if !ok {
+		return nil, echo.ErrUnauthorized
+	}
+
+	user, err := db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, echo.ErrUnauthorized
+		}
+		return nil, err
+	}
+	return user, nil
 }
