@@ -99,11 +99,13 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 		return err
 	}
 
+	returnURL := sessionState["return"]
+
+	delete(sess.Values, "github_state_"+callbackParams.State)
 	sess.Values["user_id"] = user.ID.String()
-	sess.Values["access_token"] = token.AccessToken
 	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
 		return err
 	}
 
-	return ctx.Redirect(http.StatusSeeOther, sessionState["return"])
+	return ctx.Redirect(http.StatusSeeOther, returnURL)
 }

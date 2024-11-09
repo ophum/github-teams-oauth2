@@ -12,6 +12,13 @@ services:
     image: redis:latest
     ports:
       - 127.0.0.1:6379:6379
+  redis_insight:
+    image: redis/redisinsight:latest
+    ports:
+      - 127.0.0.1:5540:5540
+    volumes:
+      - redis_insight_data:/data
 
 volumes:
   data:
+  redis_insight_data:

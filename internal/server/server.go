@@ -32,6 +32,8 @@ import (
 
 func init() {
 	gob.Register(map[string]string{})
+	gob.Register(BeginAuthorizeRequest{})
+	gob.Register(map[string]BeginAuthorizeRequest{})
 }
 
 type Template struct {
@@ -121,18 +123,6 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid client_id'")
 	}
 
-	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
-		"openid",
-	})
-
-	sess.Values["client_id"] = req.ClientID
-	sess.Values["state"] = req.State
-	sess.Values["redirect_uri"] = req.RedirectURI
-	sess.Values["scopes"] = scopes
-	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
-		return err
-	}
-
 	userID, ok := sess.Values["user_id"].(string)
 	if !ok {
 		log.Println("unauthorized, begin github oauth")
@@ -151,9 +141,27 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
+	requestID, err := randomString(16)
+	if err != nil {
+		return err
+	}
+
+	if v, ok := sess.Values["authorize_requests"].(map[string]BeginAuthorizeRequest); !ok {
+		sess.Values["authorize_requests"] = map[string]BeginAuthorizeRequest{
+			requestID: req,
+		}
+	} else {
+		v[requestID] = req
+		sess.Values["authorize_requests"] = v
+	}
+	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
+		return err
+	}
+
 	return render(ctx, http.StatusOK, "select-group", map[string]any{
-		"User":   user,
-		"Groups": groups,
+		"User":      user,
+		"Groups":    groups,
+		"RequestID": requestID,
 	})
 }
 
@@ -193,24 +201,19 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	state, ok := sess.Values["state"].(string)
+	authorizeRequests, ok := sess.Values["authorize_requests"].(map[string]BeginAuthorizeRequest)
 	if !ok {
-		return errors.New("state not found")
+		return errors.New("authz req not found in session")
+	}
+	beginReq, ok := authorizeRequests[req.RequestID]
+	if !ok {
+		return errors.New("begin req not found int session")
 	}
 
-	clientID, ok := sess.Values["client_id"].(string)
-	if !ok {
-		return errors.New("client_id not found'")
-	}
-
-	redirectURI, ok := sess.Values["redirect_uri"].(string)
-	if !ok {
-		return errors.New("invalid redirect_uri")
-	}
-
-	scopes, ok := sess.Values["scopes"].([]string)
-	if !ok {
-		return errors.New("invalid scopes")
+	delete(authorizeRequests, req.RequestID)
+	sess.Values["authorize_requests"] = authorizeRequests
+	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
+		return err
 	}
 
 	userID := sess.Values["user_id"].(string)
@@ -227,20 +230,24 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid group")
 	}
 
+	scopes := excludeInvalidScopes(strings.Split(beginReq.Scope, " "), []string{
+		"openid",
+	})
+
 	code, err := createCode(ctx.Request().Context(), s.db,
 		user.ID,
 		req.GroupIDs,
-		clientID,
+		beginReq.ClientID,
 		strings.Join(scopes, " "),
 	)
 	if err != nil {
 		return err
 	}
 
-	r, _ := url.Parse(redirectURI)
+	r, _ := url.Parse(beginReq.RedirectURI)
 	q := r.Query()
 	q.Set("code", code.Code)
-	q.Set("state", state)
+	q.Set("state", beginReq.State)
 	r.RawQuery = q.Encode()
 	return ctx.Redirect(http.StatusFound, r.String())
 }

@@ -11,6 +11,7 @@
 
 <form action="/oauth2/authorize" method="POST">
     <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
+    <input type="hidden" name="request_id" value="{{ .RequestID }}">
     {{ range .Groups }}
     <div>
         <label>

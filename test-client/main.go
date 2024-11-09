@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,6 +14,11 @@ import (
 )
 
 func main() {
+	port := "8081"
+	if len(os.Args) == 2 {
+		port = os.Args[1]
+	}
+
 	conf := oauth2.Config{
 		ClientID:     "test-client-id",
 		ClientSecret: "test-client-secret",
@@ -20,7 +26,7 @@ func main() {
 			AuthURL:  "http://localhost:8080/oauth2/authorize",
 			TokenURL: "http://localhost:8080/oauth2/token",
 		},
-		RedirectURL: "http://localhost:8081/oauth2/callback",
+		RedirectURL: "http://localhost:" + port + "/oauth2/callback",
 		Scopes: []string{
 			"openid",
 		},
@@ -70,7 +76,7 @@ func main() {
 	})
 
 	server := http.Server{
-		Addr:    ":8081",
+		Addr:    ":" + port,
 		Handler: http.DefaultServeMux,
 	}
 	go func() {
