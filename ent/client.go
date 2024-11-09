@@ -352,15 +352,15 @@ func (c *AccessTokenClient) QueryUser(at *AccessToken) *UserQuery {
 	return query
 }
 
-// QueryGroup queries the group edge of a AccessToken.
-func (c *AccessTokenClient) QueryGroup(at *AccessToken) *GroupQuery {
+// QueryGroups queries the groups edge of a AccessToken.
+func (c *AccessTokenClient) QueryGroups(at *AccessToken) *GroupQuery {
 	query := (&GroupClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := at.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(accesstoken.Table, accesstoken.FieldID, id),
 			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, accesstoken.GroupTable, accesstoken.GroupColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, accesstoken.GroupsTable, accesstoken.GroupsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(at.driver.Dialect(), step)
 		return fromV, nil
@@ -517,15 +517,15 @@ func (c *CodeClient) QueryUser(co *Code) *UserQuery {
 	return query
 }
 
-// QueryGroup queries the group edge of a Code.
-func (c *CodeClient) QueryGroup(co *Code) *GroupQuery {
+// QueryGroups queries the groups edge of a Code.
+func (c *CodeClient) QueryGroups(co *Code) *GroupQuery {
 	query := (&GroupClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := co.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(code.Table, code.FieldID, id),
 			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, code.GroupTable, code.GroupColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, code.GroupsTable, code.GroupsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(co.driver.Dialect(), step)
 		return fromV, nil
@@ -690,7 +690,7 @@ func (c *GroupClient) QueryCodes(gr *Group) *CodeQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, id),
 			sqlgraph.To(code.Table, code.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, group.CodesTable, group.CodesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.CodesTable, group.CodesPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
 		return fromV, nil
@@ -706,7 +706,7 @@ func (c *GroupClient) QueryAccessTokens(gr *Group) *AccessTokenQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, id),
 			sqlgraph.To(accesstoken.Table, accesstoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, group.AccessTokensTable, group.AccessTokensColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.AccessTokensTable, group.AccessTokensPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(gr.driver.Dialect(), step)
 		return fromV, nil

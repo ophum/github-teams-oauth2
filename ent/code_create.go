@@ -113,23 +113,19 @@ func (cc *CodeCreate) SetUser(u *User) *CodeCreate {
 	return cc.SetUserID(u.ID)
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (cc *CodeCreate) SetGroupID(id uuid.UUID) *CodeCreate {
-	cc.mutation.SetGroupID(id)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (cc *CodeCreate) AddGroupIDs(ids ...uuid.UUID) *CodeCreate {
+	cc.mutation.AddGroupIDs(ids...)
 	return cc
 }
 
-// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
-func (cc *CodeCreate) SetNillableGroupID(id *uuid.UUID) *CodeCreate {
-	if id != nil {
-		cc = cc.SetGroupID(*id)
+// AddGroups adds the "groups" edges to the Group entity.
+func (cc *CodeCreate) AddGroups(g ...*Group) *CodeCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return cc
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (cc *CodeCreate) SetGroup(g *Group) *CodeCreate {
-	return cc.SetGroupID(g.ID)
+	return cc.AddGroupIDs(ids...)
 }
 
 // Mutation returns the CodeMutation object of the builder.
@@ -275,12 +271,12 @@ func (cc *CodeCreate) createSpec() (*Code, *sqlgraph.CreateSpec) {
 		_node.user_codes = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := cc.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := cc.mutation.GroupsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   code.GroupTable,
-			Columns: []string{code.GroupColumn},
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -289,7 +285,6 @@ func (cc *CodeCreate) createSpec() (*Code, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.group_codes = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

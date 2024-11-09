@@ -120,23 +120,19 @@ func (cu *CodeUpdate) SetUser(u *User) *CodeUpdate {
 	return cu.SetUserID(u.ID)
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (cu *CodeUpdate) SetGroupID(id uuid.UUID) *CodeUpdate {
-	cu.mutation.SetGroupID(id)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (cu *CodeUpdate) AddGroupIDs(ids ...uuid.UUID) *CodeUpdate {
+	cu.mutation.AddGroupIDs(ids...)
 	return cu
 }
 
-// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
-func (cu *CodeUpdate) SetNillableGroupID(id *uuid.UUID) *CodeUpdate {
-	if id != nil {
-		cu = cu.SetGroupID(*id)
+// AddGroups adds the "groups" edges to the Group entity.
+func (cu *CodeUpdate) AddGroups(g ...*Group) *CodeUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return cu
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (cu *CodeUpdate) SetGroup(g *Group) *CodeUpdate {
-	return cu.SetGroupID(g.ID)
+	return cu.AddGroupIDs(ids...)
 }
 
 // Mutation returns the CodeMutation object of the builder.
@@ -150,10 +146,25 @@ func (cu *CodeUpdate) ClearUser() *CodeUpdate {
 	return cu
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (cu *CodeUpdate) ClearGroup() *CodeUpdate {
-	cu.mutation.ClearGroup()
+// ClearGroups clears all "groups" edges to the Group entity.
+func (cu *CodeUpdate) ClearGroups() *CodeUpdate {
+	cu.mutation.ClearGroups()
 	return cu
+}
+
+// RemoveGroupIDs removes the "groups" edge to Group entities by IDs.
+func (cu *CodeUpdate) RemoveGroupIDs(ids ...uuid.UUID) *CodeUpdate {
+	cu.mutation.RemoveGroupIDs(ids...)
+	return cu
+}
+
+// RemoveGroups removes "groups" edges to Group entities.
+func (cu *CodeUpdate) RemoveGroups(g ...*Group) *CodeUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return cu.RemoveGroupIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -236,12 +247,12 @@ func (cu *CodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if cu.mutation.GroupCleared() {
+	if cu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   code.GroupTable,
-			Columns: []string{code.GroupColumn},
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -249,12 +260,28 @@ func (cu *CodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cu.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := cu.mutation.RemovedGroupsIDs(); len(nodes) > 0 && !cu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   code.GroupTable,
-			Columns: []string{code.GroupColumn},
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cu.mutation.GroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -374,23 +401,19 @@ func (cuo *CodeUpdateOne) SetUser(u *User) *CodeUpdateOne {
 	return cuo.SetUserID(u.ID)
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (cuo *CodeUpdateOne) SetGroupID(id uuid.UUID) *CodeUpdateOne {
-	cuo.mutation.SetGroupID(id)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (cuo *CodeUpdateOne) AddGroupIDs(ids ...uuid.UUID) *CodeUpdateOne {
+	cuo.mutation.AddGroupIDs(ids...)
 	return cuo
 }
 
-// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
-func (cuo *CodeUpdateOne) SetNillableGroupID(id *uuid.UUID) *CodeUpdateOne {
-	if id != nil {
-		cuo = cuo.SetGroupID(*id)
+// AddGroups adds the "groups" edges to the Group entity.
+func (cuo *CodeUpdateOne) AddGroups(g ...*Group) *CodeUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return cuo
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (cuo *CodeUpdateOne) SetGroup(g *Group) *CodeUpdateOne {
-	return cuo.SetGroupID(g.ID)
+	return cuo.AddGroupIDs(ids...)
 }
 
 // Mutation returns the CodeMutation object of the builder.
@@ -404,10 +427,25 @@ func (cuo *CodeUpdateOne) ClearUser() *CodeUpdateOne {
 	return cuo
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (cuo *CodeUpdateOne) ClearGroup() *CodeUpdateOne {
-	cuo.mutation.ClearGroup()
+// ClearGroups clears all "groups" edges to the Group entity.
+func (cuo *CodeUpdateOne) ClearGroups() *CodeUpdateOne {
+	cuo.mutation.ClearGroups()
 	return cuo
+}
+
+// RemoveGroupIDs removes the "groups" edge to Group entities by IDs.
+func (cuo *CodeUpdateOne) RemoveGroupIDs(ids ...uuid.UUID) *CodeUpdateOne {
+	cuo.mutation.RemoveGroupIDs(ids...)
+	return cuo
+}
+
+// RemoveGroups removes "groups" edges to Group entities.
+func (cuo *CodeUpdateOne) RemoveGroups(g ...*Group) *CodeUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return cuo.RemoveGroupIDs(ids...)
 }
 
 // Where appends a list predicates to the CodeUpdate builder.
@@ -520,12 +558,12 @@ func (cuo *CodeUpdateOne) sqlSave(ctx context.Context) (_node *Code, err error) 
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if cuo.mutation.GroupCleared() {
+	if cuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   code.GroupTable,
-			Columns: []string{code.GroupColumn},
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -533,12 +571,28 @@ func (cuo *CodeUpdateOne) sqlSave(ctx context.Context) (_node *Code, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cuo.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := cuo.mutation.RemovedGroupsIDs(); len(nodes) > 0 && !cuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   code.GroupTable,
-			Columns: []string{code.GroupColumn},
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := cuo.mutation.GroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   code.GroupsTable,
+			Columns: code.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),

@@ -78,23 +78,19 @@ func (atu *AccessTokenUpdate) SetUser(u *User) *AccessTokenUpdate {
 	return atu.SetUserID(u.ID)
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (atu *AccessTokenUpdate) SetGroupID(id uuid.UUID) *AccessTokenUpdate {
-	atu.mutation.SetGroupID(id)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (atu *AccessTokenUpdate) AddGroupIDs(ids ...uuid.UUID) *AccessTokenUpdate {
+	atu.mutation.AddGroupIDs(ids...)
 	return atu
 }
 
-// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
-func (atu *AccessTokenUpdate) SetNillableGroupID(id *uuid.UUID) *AccessTokenUpdate {
-	if id != nil {
-		atu = atu.SetGroupID(*id)
+// AddGroups adds the "groups" edges to the Group entity.
+func (atu *AccessTokenUpdate) AddGroups(g ...*Group) *AccessTokenUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return atu
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (atu *AccessTokenUpdate) SetGroup(g *Group) *AccessTokenUpdate {
-	return atu.SetGroupID(g.ID)
+	return atu.AddGroupIDs(ids...)
 }
 
 // Mutation returns the AccessTokenMutation object of the builder.
@@ -108,10 +104,25 @@ func (atu *AccessTokenUpdate) ClearUser() *AccessTokenUpdate {
 	return atu
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (atu *AccessTokenUpdate) ClearGroup() *AccessTokenUpdate {
-	atu.mutation.ClearGroup()
+// ClearGroups clears all "groups" edges to the Group entity.
+func (atu *AccessTokenUpdate) ClearGroups() *AccessTokenUpdate {
+	atu.mutation.ClearGroups()
 	return atu
+}
+
+// RemoveGroupIDs removes the "groups" edge to Group entities by IDs.
+func (atu *AccessTokenUpdate) RemoveGroupIDs(ids ...uuid.UUID) *AccessTokenUpdate {
+	atu.mutation.RemoveGroupIDs(ids...)
+	return atu
+}
+
+// RemoveGroups removes "groups" edges to Group entities.
+func (atu *AccessTokenUpdate) RemoveGroups(g ...*Group) *AccessTokenUpdate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return atu.RemoveGroupIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -185,12 +196,12 @@ func (atu *AccessTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atu.mutation.GroupCleared() {
+	if atu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   accesstoken.GroupTable,
-			Columns: []string{accesstoken.GroupColumn},
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -198,12 +209,28 @@ func (atu *AccessTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atu.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := atu.mutation.RemovedGroupsIDs(); len(nodes) > 0 && !atu.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   accesstoken.GroupTable,
-			Columns: []string{accesstoken.GroupColumn},
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := atu.mutation.GroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -281,23 +308,19 @@ func (atuo *AccessTokenUpdateOne) SetUser(u *User) *AccessTokenUpdateOne {
 	return atuo.SetUserID(u.ID)
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (atuo *AccessTokenUpdateOne) SetGroupID(id uuid.UUID) *AccessTokenUpdateOne {
-	atuo.mutation.SetGroupID(id)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (atuo *AccessTokenUpdateOne) AddGroupIDs(ids ...uuid.UUID) *AccessTokenUpdateOne {
+	atuo.mutation.AddGroupIDs(ids...)
 	return atuo
 }
 
-// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
-func (atuo *AccessTokenUpdateOne) SetNillableGroupID(id *uuid.UUID) *AccessTokenUpdateOne {
-	if id != nil {
-		atuo = atuo.SetGroupID(*id)
+// AddGroups adds the "groups" edges to the Group entity.
+func (atuo *AccessTokenUpdateOne) AddGroups(g ...*Group) *AccessTokenUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return atuo
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (atuo *AccessTokenUpdateOne) SetGroup(g *Group) *AccessTokenUpdateOne {
-	return atuo.SetGroupID(g.ID)
+	return atuo.AddGroupIDs(ids...)
 }
 
 // Mutation returns the AccessTokenMutation object of the builder.
@@ -311,10 +334,25 @@ func (atuo *AccessTokenUpdateOne) ClearUser() *AccessTokenUpdateOne {
 	return atuo
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (atuo *AccessTokenUpdateOne) ClearGroup() *AccessTokenUpdateOne {
-	atuo.mutation.ClearGroup()
+// ClearGroups clears all "groups" edges to the Group entity.
+func (atuo *AccessTokenUpdateOne) ClearGroups() *AccessTokenUpdateOne {
+	atuo.mutation.ClearGroups()
 	return atuo
+}
+
+// RemoveGroupIDs removes the "groups" edge to Group entities by IDs.
+func (atuo *AccessTokenUpdateOne) RemoveGroupIDs(ids ...uuid.UUID) *AccessTokenUpdateOne {
+	atuo.mutation.RemoveGroupIDs(ids...)
+	return atuo
+}
+
+// RemoveGroups removes "groups" edges to Group entities.
+func (atuo *AccessTokenUpdateOne) RemoveGroups(g ...*Group) *AccessTokenUpdateOne {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return atuo.RemoveGroupIDs(ids...)
 }
 
 // Where appends a list predicates to the AccessTokenUpdate builder.
@@ -418,12 +456,12 @@ func (atuo *AccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *AccessTok
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
-	if atuo.mutation.GroupCleared() {
+	if atuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   accesstoken.GroupTable,
-			Columns: []string{accesstoken.GroupColumn},
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -431,12 +469,28 @@ func (atuo *AccessTokenUpdateOne) sqlSave(ctx context.Context) (_node *AccessTok
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := atuo.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := atuo.mutation.RemovedGroupsIDs(); len(nodes) > 0 && !atuo.mutation.GroupsCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   accesstoken.GroupTable,
-			Columns: []string{accesstoken.GroupColumn},
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := atuo.mutation.GroupsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),

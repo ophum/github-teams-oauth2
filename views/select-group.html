@@ -8,13 +8,19 @@
 <h1>github teams oauth2: select group</h1>
 
 <p>{{ .User.Name }}でログインしています。</p>
-{{ range .Groups }}
+
 <form action="/oauth2/authorize" method="POST">
     <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
-    <input type="hidden" name="group_id" value="{{ .ID }}">
-    <button type="submit">{{ .Name }}</button>
+    {{ range .Groups }}
+    <div>
+        <label>
+            <input type="checkbox" name="group_ids[]" value="{{ .ID }}">
+            {{ .Name }}
+        </label>
+    </div>
+    {{ end }}
+    <button type="submit">認可</button>
 </form>
-{{ end }}
 
 </html>
 {{end}}

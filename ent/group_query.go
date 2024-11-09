@@ -102,7 +102,7 @@ func (gq *GroupQuery) QueryCodes() *CodeQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, selector),
 			sqlgraph.To(code.Table, code.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, group.CodesTable, group.CodesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.CodesTable, group.CodesPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
 		return fromU, nil
@@ -124,7 +124,7 @@ func (gq *GroupQuery) QueryAccessTokens() *AccessTokenQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(group.Table, group.FieldID, selector),
 			sqlgraph.To(accesstoken.Table, accesstoken.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, group.AccessTokensTable, group.AccessTokensColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, group.AccessTokensTable, group.AccessTokensPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(gq.driver.Dialect(), step)
 		return fromU, nil
@@ -554,64 +554,124 @@ func (gq *GroupQuery) loadUsers(ctx context.Context, query *UserQuery, nodes []*
 	return nil
 }
 func (gq *GroupQuery) loadCodes(ctx context.Context, query *CodeQuery, nodes []*Group, init func(*Group), assign func(*Group, *Code)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Group)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Group)
+	nids := make(map[uuid.UUID]map[*Group]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
 		if init != nil {
-			init(nodes[i])
+			init(node)
 		}
 	}
-	query.withFKs = true
-	query.Where(predicate.Code(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(group.CodesColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(group.CodesTable)
+		s.Join(joinT).On(s.C(code.FieldID), joinT.C(group.CodesPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(group.CodesPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(group.CodesPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Group]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Code](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.group_codes
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "group_codes" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "group_codes" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected "codes" node returned %v`, n.ID)
 		}
-		assign(node, n)
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }
 func (gq *GroupQuery) loadAccessTokens(ctx context.Context, query *AccessTokenQuery, nodes []*Group, init func(*Group), assign func(*Group, *AccessToken)) error {
-	fks := make([]driver.Value, 0, len(nodes))
-	nodeids := make(map[uuid.UUID]*Group)
-	for i := range nodes {
-		fks = append(fks, nodes[i].ID)
-		nodeids[nodes[i].ID] = nodes[i]
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Group)
+	nids := make(map[uuid.UUID]map[*Group]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
 		if init != nil {
-			init(nodes[i])
+			init(node)
 		}
 	}
-	query.withFKs = true
-	query.Where(predicate.AccessToken(func(s *sql.Selector) {
-		s.Where(sql.InValues(s.C(group.AccessTokensColumn), fks...))
-	}))
-	neighbors, err := query.All(ctx)
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(group.AccessTokensTable)
+		s.Join(joinT).On(s.C(accesstoken.FieldID), joinT.C(group.AccessTokensPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(group.AccessTokensPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(group.AccessTokensPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Group]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*AccessToken](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		fk := n.group_access_tokens
-		if fk == nil {
-			return fmt.Errorf(`foreign-key "group_access_tokens" is nil for node %v`, n.ID)
-		}
-		node, ok := nodeids[*fk]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected referenced foreign-key "group_access_tokens" returned %v for node %v`, *fk, n.ID)
+			return fmt.Errorf(`unexpected "access_tokens" node returned %v`, n.ID)
 		}
-		assign(node, n)
+		for kn := range nodes {
+			assign(kn, n)
+		}
 	}
 	return nil
 }

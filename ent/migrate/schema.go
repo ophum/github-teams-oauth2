@@ -13,7 +13,6 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "token", Type: field.TypeString},
 		{Name: "expires_at", Type: field.TypeTime},
-		{Name: "group_access_tokens", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_access_tokens", Type: field.TypeUUID, Nullable: true},
 	}
 	// AccessTokensTable holds the schema information for the "access_tokens" table.
@@ -23,14 +22,8 @@ var (
 		PrimaryKey: []*schema.Column{AccessTokensColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "access_tokens_groups_access_tokens",
-				Columns:    []*schema.Column{AccessTokensColumns[3]},
-				RefColumns: []*schema.Column{GroupsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "access_tokens_users_access_tokens",
-				Columns:    []*schema.Column{AccessTokensColumns[4]},
+				Columns:    []*schema.Column{AccessTokensColumns[3]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -44,7 +37,6 @@ var (
 		{Name: "scope", Type: field.TypeString, Default: ""},
 		{Name: "redirect_uri", Type: field.TypeString, Default: ""},
 		{Name: "expires_at", Type: field.TypeTime},
-		{Name: "group_codes", Type: field.TypeUUID, Nullable: true},
 		{Name: "user_codes", Type: field.TypeUUID, Nullable: true},
 	}
 	// CodesTable holds the schema information for the "codes" table.
@@ -54,14 +46,8 @@ var (
 		PrimaryKey: []*schema.Column{CodesColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "codes_groups_codes",
-				Columns:    []*schema.Column{CodesColumns[6]},
-				RefColumns: []*schema.Column{GroupsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "codes_users_codes",
-				Columns:    []*schema.Column{CodesColumns[7]},
+				Columns:    []*schema.Column{CodesColumns[6]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -89,6 +75,56 @@ var (
 		Name:       "users",
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
+	}
+	// GroupCodesColumns holds the columns for the "group_codes" table.
+	GroupCodesColumns = []*schema.Column{
+		{Name: "group_id", Type: field.TypeUUID},
+		{Name: "code_id", Type: field.TypeUUID},
+	}
+	// GroupCodesTable holds the schema information for the "group_codes" table.
+	GroupCodesTable = &schema.Table{
+		Name:       "group_codes",
+		Columns:    GroupCodesColumns,
+		PrimaryKey: []*schema.Column{GroupCodesColumns[0], GroupCodesColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "group_codes_group_id",
+				Columns:    []*schema.Column{GroupCodesColumns[0]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "group_codes_code_id",
+				Columns:    []*schema.Column{GroupCodesColumns[1]},
+				RefColumns: []*schema.Column{CodesColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
+	// GroupAccessTokensColumns holds the columns for the "group_access_tokens" table.
+	GroupAccessTokensColumns = []*schema.Column{
+		{Name: "group_id", Type: field.TypeUUID},
+		{Name: "access_token_id", Type: field.TypeUUID},
+	}
+	// GroupAccessTokensTable holds the schema information for the "group_access_tokens" table.
+	GroupAccessTokensTable = &schema.Table{
+		Name:       "group_access_tokens",
+		Columns:    GroupAccessTokensColumns,
+		PrimaryKey: []*schema.Column{GroupAccessTokensColumns[0], GroupAccessTokensColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "group_access_tokens_group_id",
+				Columns:    []*schema.Column{GroupAccessTokensColumns[0]},
+				RefColumns: []*schema.Column{GroupsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "group_access_tokens_access_token_id",
+				Columns:    []*schema.Column{GroupAccessTokensColumns[1]},
+				RefColumns: []*schema.Column{AccessTokensColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
 	}
 	// UserGroupsColumns holds the columns for the "user_groups" table.
 	UserGroupsColumns = []*schema.Column{
@@ -121,15 +157,19 @@ var (
 		CodesTable,
 		GroupsTable,
 		UsersTable,
+		GroupCodesTable,
+		GroupAccessTokensTable,
 		UserGroupsTable,
 	}
 )
 
 func init() {
-	AccessTokensTable.ForeignKeys[0].RefTable = GroupsTable
-	AccessTokensTable.ForeignKeys[1].RefTable = UsersTable
-	CodesTable.ForeignKeys[0].RefTable = GroupsTable
-	CodesTable.ForeignKeys[1].RefTable = UsersTable
+	AccessTokensTable.ForeignKeys[0].RefTable = UsersTable
+	CodesTable.ForeignKeys[0].RefTable = UsersTable
+	GroupCodesTable.ForeignKeys[0].RefTable = GroupsTable
+	GroupCodesTable.ForeignKeys[1].RefTable = CodesTable
+	GroupAccessTokensTable.ForeignKeys[0].RefTable = GroupsTable
+	GroupAccessTokensTable.ForeignKeys[1].RefTable = AccessTokensTable
 	UserGroupsTable.ForeignKeys[0].RefTable = UsersTable
 	UserGroupsTable.ForeignKeys[1].RefTable = GroupsTable
 }

@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/ophum/github-teams-oauth2/ent/code"
-	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/user"
 )
 
@@ -33,7 +32,6 @@ type Code struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CodeQuery when eager-loading is set.
 	Edges        CodeEdges `json:"edges"`
-	group_codes  *uuid.UUID
 	user_codes   *uuid.UUID
 	selectValues sql.SelectValues
 }
@@ -42,8 +40,8 @@ type Code struct {
 type CodeEdges struct {
 	// User holds the value of the user edge.
 	User *User `json:"user,omitempty"`
-	// Group holds the value of the group edge.
-	Group *Group `json:"group,omitempty"`
+	// Groups holds the value of the groups edge.
+	Groups []*Group `json:"groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
@@ -60,15 +58,13 @@ func (e CodeEdges) UserOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "user"}
 }
 
-// GroupOrErr returns the Group value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e CodeEdges) GroupOrErr() (*Group, error) {
-	if e.Group != nil {
-		return e.Group, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: group.Label}
+// GroupsOrErr returns the Groups value or an error if the edge
+// was not loaded in eager-loading.
+func (e CodeEdges) GroupsOrErr() ([]*Group, error) {
+	if e.loadedTypes[1] {
+		return e.Groups, nil
 	}
-	return nil, &NotLoadedError{edge: "group"}
+	return nil, &NotLoadedError{edge: "groups"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -82,9 +78,7 @@ func (*Code) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case code.FieldID:
 			values[i] = new(uuid.UUID)
-		case code.ForeignKeys[0]: // group_codes
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case code.ForeignKeys[1]: // user_codes
+		case code.ForeignKeys[0]: // user_codes
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -139,13 +133,6 @@ func (c *Code) assignValues(columns []string, values []any) error {
 			}
 		case code.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field group_codes", values[i])
-			} else if value.Valid {
-				c.group_codes = new(uuid.UUID)
-				*c.group_codes = *value.S.(*uuid.UUID)
-			}
-		case code.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_codes", values[i])
 			} else if value.Valid {
 				c.user_codes = new(uuid.UUID)
@@ -169,9 +156,9 @@ func (c *Code) QueryUser() *UserQuery {
 	return NewCodeClient(c.config).QueryUser(c)
 }
 
-// QueryGroup queries the "group" edge of the Code entity.
-func (c *Code) QueryGroup() *GroupQuery {
-	return NewCodeClient(c.config).QueryGroup(c)
+// QueryGroups queries the "groups" edge of the Code entity.
+func (c *Code) QueryGroups() *GroupQuery {
+	return NewCodeClient(c.config).QueryGroups(c)
 }
 
 // Update returns a builder for updating this Code.

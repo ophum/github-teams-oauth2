@@ -17,7 +17,7 @@ type BeginAuthorizeRequest struct {
 }
 
 type PostAuthorizeRequest struct {
-	GroupID uuid.UUID `form:"group_id"`
+	GroupIDs []uuid.UUID `form:"group_ids[]"`
 }
 
 type GrantType string

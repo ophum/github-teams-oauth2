@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -26,7 +27,7 @@ type CodeQuery struct {
 	inters     []Interceptor
 	predicates []predicate.Code
 	withUser   *UserQuery
-	withGroup  *GroupQuery
+	withGroups *GroupQuery
 	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -86,8 +87,8 @@ func (cq *CodeQuery) QueryUser() *UserQuery {
 	return query
 }
 
-// QueryGroup chains the current query on the "group" edge.
-func (cq *CodeQuery) QueryGroup() *GroupQuery {
+// QueryGroups chains the current query on the "groups" edge.
+func (cq *CodeQuery) QueryGroups() *GroupQuery {
 	query := (&GroupClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
@@ -100,7 +101,7 @@ func (cq *CodeQuery) QueryGroup() *GroupQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(code.Table, code.FieldID, selector),
 			sqlgraph.To(group.Table, group.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, code.GroupTable, code.GroupColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, code.GroupsTable, code.GroupsPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -301,7 +302,7 @@ func (cq *CodeQuery) Clone() *CodeQuery {
 		inters:     append([]Interceptor{}, cq.inters...),
 		predicates: append([]predicate.Code{}, cq.predicates...),
 		withUser:   cq.withUser.Clone(),
-		withGroup:  cq.withGroup.Clone(),
+		withGroups: cq.withGroups.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
@@ -319,14 +320,14 @@ func (cq *CodeQuery) WithUser(opts ...func(*UserQuery)) *CodeQuery {
 	return cq
 }
 
-// WithGroup tells the query-builder to eager-load the nodes that are connected to
-// the "group" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CodeQuery) WithGroup(opts ...func(*GroupQuery)) *CodeQuery {
+// WithGroups tells the query-builder to eager-load the nodes that are connected to
+// the "groups" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CodeQuery) WithGroups(opts ...func(*GroupQuery)) *CodeQuery {
 	query := (&GroupClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withGroup = query
+	cq.withGroups = query
 	return cq
 }
 
@@ -411,10 +412,10 @@ func (cq *CodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Code, e
 		_spec       = cq.querySpec()
 		loadedTypes = [2]bool{
 			cq.withUser != nil,
-			cq.withGroup != nil,
+			cq.withGroups != nil,
 		}
 	)
-	if cq.withUser != nil || cq.withGroup != nil {
+	if cq.withUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -444,9 +445,10 @@ func (cq *CodeQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Code, e
 			return nil, err
 		}
 	}
-	if query := cq.withGroup; query != nil {
-		if err := cq.loadGroup(ctx, query, nodes, nil,
-			func(n *Code, e *Group) { n.Edges.Group = e }); err != nil {
+	if query := cq.withGroups; query != nil {
+		if err := cq.loadGroups(ctx, query, nodes,
+			func(n *Code) { n.Edges.Groups = []*Group{} },
+			func(n *Code, e *Group) { n.Edges.Groups = append(n.Edges.Groups, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -485,34 +487,63 @@ func (cq *CodeQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Co
 	}
 	return nil
 }
-func (cq *CodeQuery) loadGroup(ctx context.Context, query *GroupQuery, nodes []*Code, init func(*Code), assign func(*Code, *Group)) error {
-	ids := make([]uuid.UUID, 0, len(nodes))
-	nodeids := make(map[uuid.UUID][]*Code)
-	for i := range nodes {
-		if nodes[i].group_codes == nil {
-			continue
+func (cq *CodeQuery) loadGroups(ctx context.Context, query *GroupQuery, nodes []*Code, init func(*Code), assign func(*Code, *Group)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Code)
+	nids := make(map[uuid.UUID]map[*Code]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
 		}
-		fk := *nodes[i].group_codes
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
 	}
-	if len(ids) == 0 {
-		return nil
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(code.GroupsTable)
+		s.Join(joinT).On(s.C(group.FieldID), joinT.C(code.GroupsPrimaryKey[0]))
+		s.Where(sql.InValues(joinT.C(code.GroupsPrimaryKey[1]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(code.GroupsPrimaryKey[1]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
 	}
-	query.Where(group.IDIn(ids...))
-	neighbors, err := query.All(ctx)
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Code]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*Group](ctx, query, qr, query.inters)
 	if err != nil {
 		return err
 	}
 	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
+		nodes, ok := nids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "group_codes" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected "groups" node returned %v`, n.ID)
 		}
-		for i := range nodes {
-			assign(nodes[i], n)
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

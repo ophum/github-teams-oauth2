@@ -219,7 +219,9 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	if exists, err := user.QueryGroups().Where(group.ID(req.GroupID)).Exist(ctx.Request().Context()); err != nil {
+	if exists, err := user.QueryGroups().
+		Where(group.IDIn(req.GroupIDs...)).
+		Exist(ctx.Request().Context()); err != nil {
 		return err
 	} else if !exists {
 		return errors.New("invalid group")
@@ -227,7 +229,7 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 
 	code, err := createCode(ctx.Request().Context(), s.db,
 		user.ID,
-		req.GroupID,
+		req.GroupIDs,
 		clientID,
 		strings.Join(scopes, " "),
 	)
@@ -290,13 +292,15 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		return err
 	}
 
-	group, err := code.QueryGroup().First(ctx.Request().Context())
+	groups, err := code.QueryGroups().All(ctx.Request().Context())
 	if err != nil {
 		return err
 	}
 
 	token, err := createAccessToken(ctx.Request().Context(), s.db,
-		user.ID, group.ID)
+		user.ID, slicesMap(groups, func(v *ent.Group) uuid.UUID {
+			return v.ID
+		}))
 	if err != nil {
 		return err
 	}
@@ -322,9 +326,9 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 			"iat":      time.Now().Unix(),
 			"username": user.Name,
 			"email":    user.Email,
-			"groups": []string{
-				group.Name,
-			},
+			"groups": slicesMap(groups, func(v *ent.Group) string {
+				return v.Name
+			}),
 		})
 		ret["id_token"], err = idToken.SignedString([]byte("secret"))
 		if err != nil {
@@ -352,7 +356,7 @@ func (s *Server) getUserinfoHandle(ctx echo.Context) error {
 		return err
 	}
 
-	group, err := accessToken.QueryGroup().First(ctx.Request().Context())
+	groups, err := accessToken.QueryGroups().All(ctx.Request().Context())
 	if err != nil {
 		return err
 	}
@@ -361,6 +365,8 @@ func (s *Server) getUserinfoHandle(ctx echo.Context) error {
 		"id":       user.ID.String(),
 		"username": user.Name,
 		"email":    user.Email,
-		"groups":   []string{group.Name},
+		"groups": slicesMap(groups, func(v *ent.Group) string {
+			return v.Name
+		}),
 	})
 }

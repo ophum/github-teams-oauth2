@@ -244,10 +244,10 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if gu.mutation.CodesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -257,10 +257,10 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := gu.mutation.RemovedCodesIDs(); len(nodes) > 0 && !gu.mutation.CodesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -273,10 +273,10 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := gu.mutation.CodesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -289,10 +289,10 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if gu.mutation.AccessTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
@@ -302,10 +302,10 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := gu.mutation.RemovedAccessTokensIDs(); len(nodes) > 0 && !gu.mutation.AccessTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
@@ -318,10 +318,10 @@ func (gu *GroupUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if nodes := gu.mutation.AccessTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
@@ -595,10 +595,10 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 	}
 	if guo.mutation.CodesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -608,10 +608,10 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 	}
 	if nodes := guo.mutation.RemovedCodesIDs(); len(nodes) > 0 && !guo.mutation.CodesCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -624,10 +624,10 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 	}
 	if nodes := guo.mutation.CodesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -640,10 +640,10 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 	}
 	if guo.mutation.AccessTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
@@ -653,10 +653,10 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 	}
 	if nodes := guo.mutation.RemovedAccessTokensIDs(); len(nodes) > 0 && !guo.mutation.AccessTokensCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),
@@ -669,10 +669,10 @@ func (guo *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error
 	}
 	if nodes := guo.mutation.AccessTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),

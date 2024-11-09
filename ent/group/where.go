@@ -152,7 +152,7 @@ func HasCodes() predicate.Group {
 	return predicate.Group(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, CodesTable, CodesColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, CodesTable, CodesPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -175,7 +175,7 @@ func HasAccessTokens() predicate.Group {
 	return predicate.Group(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AccessTokensTable, AccessTokensColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, AccessTokensTable, AccessTokensPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})

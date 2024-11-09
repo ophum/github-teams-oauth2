@@ -50,7 +50,7 @@ func excludeInvalidScopes(scopes, validScopes []string) []string {
 	})
 }
 
-func createCode(ctx context.Context, db *ent.Client, userID, groupID uuid.UUID, clientID, scope string) (*ent.Code, error) {
+func createCode(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID, clientID, scope string) (*ent.Code, error) {
 	for {
 		c, err := randomString(40)
 		if err != nil {
@@ -65,7 +65,7 @@ func createCode(ctx context.Context, db *ent.Client, userID, groupID uuid.UUID, 
 		}
 
 		return db.Code.Create().
-			SetGroupID(groupID).
+			AddGroupIDs(groupIDs...).
 			SetUserID(userID).
 			SetCode(c).
 			SetExpiresAt(time.Now().Add(time.Minute)).
@@ -120,7 +120,7 @@ func getBearerToken(header http.Header) (string, error) {
 	return right, nil
 }
 
-func createAccessToken(ctx context.Context, db *ent.Client, userID, groupID uuid.UUID) (*ent.AccessToken, error) {
+func createAccessToken(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID) (*ent.AccessToken, error) {
 	for {
 		t, err := randomString(20)
 		if err != nil {
@@ -139,7 +139,15 @@ func createAccessToken(ctx context.Context, db *ent.Client, userID, groupID uuid
 			SetToken(t).
 			SetExpiresAt(time.Now().Add(time.Hour)).
 			SetUserID(userID).
-			SetGroupID(groupID).
+			AddGroupIDs(groupIDs...).
 			Save(ctx)
 	}
+}
+
+func slicesMap[T, E any](s []T, f func(v T) E) []E {
+	r := make([]E, 0, len(s))
+	for _, v := range s {
+		r = append(r, f(v))
+	}
+	return r
 }

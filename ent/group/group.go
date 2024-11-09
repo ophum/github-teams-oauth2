@@ -28,20 +28,16 @@ const (
 	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UsersInverseTable = "users"
-	// CodesTable is the table that holds the codes relation/edge.
-	CodesTable = "codes"
+	// CodesTable is the table that holds the codes relation/edge. The primary key declared below.
+	CodesTable = "group_codes"
 	// CodesInverseTable is the table name for the Code entity.
 	// It exists in this package in order to avoid circular dependency with the "code" package.
 	CodesInverseTable = "codes"
-	// CodesColumn is the table column denoting the codes relation/edge.
-	CodesColumn = "group_codes"
-	// AccessTokensTable is the table that holds the access_tokens relation/edge.
-	AccessTokensTable = "access_tokens"
+	// AccessTokensTable is the table that holds the access_tokens relation/edge. The primary key declared below.
+	AccessTokensTable = "group_access_tokens"
 	// AccessTokensInverseTable is the table name for the AccessToken entity.
 	// It exists in this package in order to avoid circular dependency with the "accesstoken" package.
 	AccessTokensInverseTable = "access_tokens"
-	// AccessTokensColumn is the table column denoting the access_tokens relation/edge.
-	AccessTokensColumn = "group_access_tokens"
 )
 
 // Columns holds all SQL columns for group fields.
@@ -54,6 +50,12 @@ var (
 	// UsersPrimaryKey and UsersColumn2 are the table columns denoting the
 	// primary key for the users relation (M2M).
 	UsersPrimaryKey = []string{"user_id", "group_id"}
+	// CodesPrimaryKey and CodesColumn2 are the table columns denoting the
+	// primary key for the codes relation (M2M).
+	CodesPrimaryKey = []string{"group_id", "code_id"}
+	// AccessTokensPrimaryKey and AccessTokensColumn2 are the table columns denoting the
+	// primary key for the access_tokens relation (M2M).
+	AccessTokensPrimaryKey = []string{"group_id", "access_token_id"}
 )
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -136,13 +138,13 @@ func newCodesStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CodesInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, CodesTable, CodesColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, CodesTable, CodesPrimaryKey...),
 	)
 }
 func newAccessTokensStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(AccessTokensInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, AccessTokensTable, AccessTokensColumn),
+		sqlgraph.Edge(sqlgraph.M2M, false, AccessTokensTable, AccessTokensPrimaryKey...),
 	)
 }

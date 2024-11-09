@@ -71,23 +71,19 @@ func (atc *AccessTokenCreate) SetUser(u *User) *AccessTokenCreate {
 	return atc.SetUserID(u.ID)
 }
 
-// SetGroupID sets the "group" edge to the Group entity by ID.
-func (atc *AccessTokenCreate) SetGroupID(id uuid.UUID) *AccessTokenCreate {
-	atc.mutation.SetGroupID(id)
+// AddGroupIDs adds the "groups" edge to the Group entity by IDs.
+func (atc *AccessTokenCreate) AddGroupIDs(ids ...uuid.UUID) *AccessTokenCreate {
+	atc.mutation.AddGroupIDs(ids...)
 	return atc
 }
 
-// SetNillableGroupID sets the "group" edge to the Group entity by ID if the given value is not nil.
-func (atc *AccessTokenCreate) SetNillableGroupID(id *uuid.UUID) *AccessTokenCreate {
-	if id != nil {
-		atc = atc.SetGroupID(*id)
+// AddGroups adds the "groups" edges to the Group entity.
+func (atc *AccessTokenCreate) AddGroups(g ...*Group) *AccessTokenCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
 	}
-	return atc
-}
-
-// SetGroup sets the "group" edge to the Group entity.
-func (atc *AccessTokenCreate) SetGroup(g *Group) *AccessTokenCreate {
-	return atc.SetGroupID(g.ID)
+	return atc.AddGroupIDs(ids...)
 }
 
 // Mutation returns the AccessTokenMutation object of the builder.
@@ -200,12 +196,12 @@ func (atc *AccessTokenCreate) createSpec() (*AccessToken, *sqlgraph.CreateSpec) 
 		_node.user_access_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
-	if nodes := atc.mutation.GroupIDs(); len(nodes) > 0 {
+	if nodes := atc.mutation.GroupsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
+			Rel:     sqlgraph.M2M,
 			Inverse: true,
-			Table:   accesstoken.GroupTable,
-			Columns: []string{accesstoken.GroupColumn},
+			Table:   accesstoken.GroupsTable,
+			Columns: accesstoken.GroupsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(group.FieldID, field.TypeUUID),
@@ -214,7 +210,6 @@ func (atc *AccessTokenCreate) createSpec() (*AccessToken, *sqlgraph.CreateSpec) 
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.group_access_tokens = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -28,6 +28,6 @@ func (Code) Fields() []ent.Field {
 func (Code) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("codes").Unique(),
-		edge.From("group", Group.Type).Ref("codes").Unique(),
+		edge.From("groups", Group.Type).Ref("codes"),
 	}
 }

@@ -195,10 +195,10 @@ func (gc *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	}
 	if nodes := gc.mutation.CodesIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.CodesTable,
-			Columns: []string{group.CodesColumn},
+			Columns: group.CodesPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(code.FieldID, field.TypeUUID),
@@ -211,10 +211,10 @@ func (gc *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	}
 	if nodes := gc.mutation.AccessTokensIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.M2M,
 			Inverse: false,
 			Table:   group.AccessTokensTable,
-			Columns: []string{group.AccessTokensColumn},
+			Columns: group.AccessTokensPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(accesstoken.FieldID, field.TypeUUID),

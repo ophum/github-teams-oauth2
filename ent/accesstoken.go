@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
 	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
-	"github.com/ophum/github-teams-oauth2/ent/group"
 	"github.com/ophum/github-teams-oauth2/ent/user"
 )
 
@@ -26,18 +25,17 @@ type AccessToken struct {
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AccessTokenQuery when eager-loading is set.
-	Edges               AccessTokenEdges `json:"edges"`
-	group_access_tokens *uuid.UUID
-	user_access_tokens  *uuid.UUID
-	selectValues        sql.SelectValues
+	Edges              AccessTokenEdges `json:"edges"`
+	user_access_tokens *uuid.UUID
+	selectValues       sql.SelectValues
 }
 
 // AccessTokenEdges holds the relations/edges for other nodes in the graph.
 type AccessTokenEdges struct {
 	// User holds the value of the user edge.
 	User *User `json:"user,omitempty"`
-	// Group holds the value of the group edge.
-	Group *Group `json:"group,omitempty"`
+	// Groups holds the value of the groups edge.
+	Groups []*Group `json:"groups,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
 	loadedTypes [2]bool
@@ -54,15 +52,13 @@ func (e AccessTokenEdges) UserOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "user"}
 }
 
-// GroupOrErr returns the Group value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e AccessTokenEdges) GroupOrErr() (*Group, error) {
-	if e.Group != nil {
-		return e.Group, nil
-	} else if e.loadedTypes[1] {
-		return nil, &NotFoundError{label: group.Label}
+// GroupsOrErr returns the Groups value or an error if the edge
+// was not loaded in eager-loading.
+func (e AccessTokenEdges) GroupsOrErr() ([]*Group, error) {
+	if e.loadedTypes[1] {
+		return e.Groups, nil
 	}
-	return nil, &NotLoadedError{edge: "group"}
+	return nil, &NotLoadedError{edge: "groups"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -76,9 +72,7 @@ func (*AccessToken) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullTime)
 		case accesstoken.FieldID:
 			values[i] = new(uuid.UUID)
-		case accesstoken.ForeignKeys[0]: // group_access_tokens
-			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
-		case accesstoken.ForeignKeys[1]: // user_access_tokens
+		case accesstoken.ForeignKeys[0]: // user_access_tokens
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
@@ -115,13 +109,6 @@ func (at *AccessToken) assignValues(columns []string, values []any) error {
 			}
 		case accesstoken.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
-				return fmt.Errorf("unexpected type %T for field group_access_tokens", values[i])
-			} else if value.Valid {
-				at.group_access_tokens = new(uuid.UUID)
-				*at.group_access_tokens = *value.S.(*uuid.UUID)
-			}
-		case accesstoken.ForeignKeys[1]:
-			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_access_tokens", values[i])
 			} else if value.Valid {
 				at.user_access_tokens = new(uuid.UUID)
@@ -145,9 +132,9 @@ func (at *AccessToken) QueryUser() *UserQuery {
 	return NewAccessTokenClient(at.config).QueryUser(at)
 }
 
-// QueryGroup queries the "group" edge of the AccessToken entity.
-func (at *AccessToken) QueryGroup() *GroupQuery {
-	return NewAccessTokenClient(at.config).QueryGroup(at)
+// QueryGroups queries the "groups" edge of the AccessToken entity.
+func (at *AccessToken) QueryGroups() *GroupQuery {
+	return NewAccessTokenClient(at.config).QueryGroups(at)
 }
 
 // Update returns a builder for updating this AccessToken.

@@ -19,8 +19,8 @@ const (
 	FieldExpiresAt = "expires_at"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
-	// EdgeGroup holds the string denoting the group edge name in mutations.
-	EdgeGroup = "group"
+	// EdgeGroups holds the string denoting the groups edge name in mutations.
+	EdgeGroups = "groups"
 	// Table holds the table name of the accesstoken in the database.
 	Table = "access_tokens"
 	// UserTable is the table that holds the user relation/edge.
@@ -30,13 +30,11 @@ const (
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_access_tokens"
-	// GroupTable is the table that holds the group relation/edge.
-	GroupTable = "access_tokens"
-	// GroupInverseTable is the table name for the Group entity.
+	// GroupsTable is the table that holds the groups relation/edge. The primary key declared below.
+	GroupsTable = "group_access_tokens"
+	// GroupsInverseTable is the table name for the Group entity.
 	// It exists in this package in order to avoid circular dependency with the "group" package.
-	GroupInverseTable = "groups"
-	// GroupColumn is the table column denoting the group relation/edge.
-	GroupColumn = "group_access_tokens"
+	GroupsInverseTable = "groups"
 )
 
 // Columns holds all SQL columns for accesstoken fields.
@@ -49,9 +47,14 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "access_tokens"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"group_access_tokens",
 	"user_access_tokens",
 }
+
+var (
+	// GroupsPrimaryKey and GroupsColumn2 are the table columns denoting the
+	// primary key for the groups relation (M2M).
+	GroupsPrimaryKey = []string{"group_id", "access_token_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -98,10 +101,17 @@ func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
 	}
 }
 
-// ByGroupField orders the results by group field.
-func ByGroupField(field string, opts ...sql.OrderTermOption) OrderOption {
+// ByGroupsCount orders the results by groups count.
+func ByGroupsCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newGroupStep(), sql.OrderByField(field, opts...))
+		sqlgraph.OrderByNeighborsCount(s, newGroupsStep(), opts...)
+	}
+}
+
+// ByGroups orders the results by groups terms.
+func ByGroups(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newGroupsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newUserStep() *sqlgraph.Step {
@@ -111,10 +121,10 @@ func newUserStep() *sqlgraph.Step {
 		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
 	)
 }
-func newGroupStep() *sqlgraph.Step {
+func newGroupsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(GroupInverseTable, FieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, GroupTable, GroupColumn),
+		sqlgraph.To(GroupsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, true, GroupsTable, GroupsPrimaryKey...),
 	)
 }

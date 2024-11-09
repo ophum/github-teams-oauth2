@@ -25,6 +25,6 @@ func (AccessToken) Fields() []ent.Field {
 func (AccessToken) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("access_tokens").Unique(),
-		edge.From("group", Group.Type).Ref("access_tokens").Unique(),
+		edge.From("groups", Group.Type).Ref("access_tokens"),
 	}
 }

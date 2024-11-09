@@ -45,8 +45,9 @@ type AccessTokenMutation struct {
 	clearedFields map[string]struct{}
 	user          *uuid.UUID
 	cleareduser   bool
-	group         *uuid.UUID
-	clearedgroup  bool
+	groups        map[uuid.UUID]struct{}
+	removedgroups map[uuid.UUID]struct{}
+	clearedgroups bool
 	done          bool
 	oldValue      func(context.Context) (*AccessToken, error)
 	predicates    []predicate.AccessToken
@@ -267,43 +268,58 @@ func (m *AccessTokenMutation) ResetUser() {
 	m.cleareduser = false
 }
 
-// SetGroupID sets the "group" edge to the Group entity by id.
-func (m *AccessTokenMutation) SetGroupID(id uuid.UUID) {
-	m.group = &id
+// AddGroupIDs adds the "groups" edge to the Group entity by ids.
+func (m *AccessTokenMutation) AddGroupIDs(ids ...uuid.UUID) {
+	if m.groups == nil {
+		m.groups = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.groups[ids[i]] = struct{}{}
+	}
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (m *AccessTokenMutation) ClearGroup() {
-	m.clearedgroup = true
+// ClearGroups clears the "groups" edge to the Group entity.
+func (m *AccessTokenMutation) ClearGroups() {
+	m.clearedgroups = true
 }
 
-// GroupCleared reports if the "group" edge to the Group entity was cleared.
-func (m *AccessTokenMutation) GroupCleared() bool {
-	return m.clearedgroup
+// GroupsCleared reports if the "groups" edge to the Group entity was cleared.
+func (m *AccessTokenMutation) GroupsCleared() bool {
+	return m.clearedgroups
 }
 
-// GroupID returns the "group" edge ID in the mutation.
-func (m *AccessTokenMutation) GroupID() (id uuid.UUID, exists bool) {
-	if m.group != nil {
-		return *m.group, true
+// RemoveGroupIDs removes the "groups" edge to the Group entity by IDs.
+func (m *AccessTokenMutation) RemoveGroupIDs(ids ...uuid.UUID) {
+	if m.removedgroups == nil {
+		m.removedgroups = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.groups, ids[i])
+		m.removedgroups[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedGroups returns the removed IDs of the "groups" edge to the Group entity.
+func (m *AccessTokenMutation) RemovedGroupsIDs() (ids []uuid.UUID) {
+	for id := range m.removedgroups {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// GroupIDs returns the "group" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// GroupID instead. It exists only for internal usage by the builders.
-func (m *AccessTokenMutation) GroupIDs() (ids []uuid.UUID) {
-	if id := m.group; id != nil {
-		ids = append(ids, *id)
+// GroupsIDs returns the "groups" edge IDs in the mutation.
+func (m *AccessTokenMutation) GroupsIDs() (ids []uuid.UUID) {
+	for id := range m.groups {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetGroup resets all changes to the "group" edge.
-func (m *AccessTokenMutation) ResetGroup() {
-	m.group = nil
-	m.clearedgroup = false
+// ResetGroups resets all changes to the "groups" edge.
+func (m *AccessTokenMutation) ResetGroups() {
+	m.groups = nil
+	m.clearedgroups = false
+	m.removedgroups = nil
 }
 
 // Where appends a list predicates to the AccessTokenMutation builder.
@@ -460,8 +476,8 @@ func (m *AccessTokenMutation) AddedEdges() []string {
 	if m.user != nil {
 		edges = append(edges, accesstoken.EdgeUser)
 	}
-	if m.group != nil {
-		edges = append(edges, accesstoken.EdgeGroup)
+	if m.groups != nil {
+		edges = append(edges, accesstoken.EdgeGroups)
 	}
 	return edges
 }
@@ -474,10 +490,12 @@ func (m *AccessTokenMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user; id != nil {
 			return []ent.Value{*id}
 		}
-	case accesstoken.EdgeGroup:
-		if id := m.group; id != nil {
-			return []ent.Value{*id}
+	case accesstoken.EdgeGroups:
+		ids := make([]ent.Value, 0, len(m.groups))
+		for id := range m.groups {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
@@ -485,12 +503,23 @@ func (m *AccessTokenMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AccessTokenMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
+	if m.removedgroups != nil {
+		edges = append(edges, accesstoken.EdgeGroups)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *AccessTokenMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case accesstoken.EdgeGroups:
+		ids := make([]ent.Value, 0, len(m.removedgroups))
+		for id := range m.removedgroups {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
@@ -500,8 +529,8 @@ func (m *AccessTokenMutation) ClearedEdges() []string {
 	if m.cleareduser {
 		edges = append(edges, accesstoken.EdgeUser)
 	}
-	if m.clearedgroup {
-		edges = append(edges, accesstoken.EdgeGroup)
+	if m.clearedgroups {
+		edges = append(edges, accesstoken.EdgeGroups)
 	}
 	return edges
 }
@@ -512,8 +541,8 @@ func (m *AccessTokenMutation) EdgeCleared(name string) bool {
 	switch name {
 	case accesstoken.EdgeUser:
 		return m.cleareduser
-	case accesstoken.EdgeGroup:
-		return m.clearedgroup
+	case accesstoken.EdgeGroups:
+		return m.clearedgroups
 	}
 	return false
 }
@@ -524,9 +553,6 @@ func (m *AccessTokenMutation) ClearEdge(name string) error {
 	switch name {
 	case accesstoken.EdgeUser:
 		m.ClearUser()
-		return nil
-	case accesstoken.EdgeGroup:
-		m.ClearGroup()
 		return nil
 	}
 	return fmt.Errorf("unknown AccessToken unique edge %s", name)
@@ -539,8 +565,8 @@ func (m *AccessTokenMutation) ResetEdge(name string) error {
 	case accesstoken.EdgeUser:
 		m.ResetUser()
 		return nil
-	case accesstoken.EdgeGroup:
-		m.ResetGroup()
+	case accesstoken.EdgeGroups:
+		m.ResetGroups()
 		return nil
 	}
 	return fmt.Errorf("unknown AccessToken edge %s", name)
@@ -560,8 +586,9 @@ type CodeMutation struct {
 	clearedFields map[string]struct{}
 	user          *uuid.UUID
 	cleareduser   bool
-	group         *uuid.UUID
-	clearedgroup  bool
+	groups        map[uuid.UUID]struct{}
+	removedgroups map[uuid.UUID]struct{}
+	clearedgroups bool
 	done          bool
 	oldValue      func(context.Context) (*Code, error)
 	predicates    []predicate.Code
@@ -890,43 +917,58 @@ func (m *CodeMutation) ResetUser() {
 	m.cleareduser = false
 }
 
-// SetGroupID sets the "group" edge to the Group entity by id.
-func (m *CodeMutation) SetGroupID(id uuid.UUID) {
-	m.group = &id
+// AddGroupIDs adds the "groups" edge to the Group entity by ids.
+func (m *CodeMutation) AddGroupIDs(ids ...uuid.UUID) {
+	if m.groups == nil {
+		m.groups = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.groups[ids[i]] = struct{}{}
+	}
 }
 
-// ClearGroup clears the "group" edge to the Group entity.
-func (m *CodeMutation) ClearGroup() {
-	m.clearedgroup = true
+// ClearGroups clears the "groups" edge to the Group entity.
+func (m *CodeMutation) ClearGroups() {
+	m.clearedgroups = true
 }
 
-// GroupCleared reports if the "group" edge to the Group entity was cleared.
-func (m *CodeMutation) GroupCleared() bool {
-	return m.clearedgroup
+// GroupsCleared reports if the "groups" edge to the Group entity was cleared.
+func (m *CodeMutation) GroupsCleared() bool {
+	return m.clearedgroups
 }
 
-// GroupID returns the "group" edge ID in the mutation.
-func (m *CodeMutation) GroupID() (id uuid.UUID, exists bool) {
-	if m.group != nil {
-		return *m.group, true
+// RemoveGroupIDs removes the "groups" edge to the Group entity by IDs.
+func (m *CodeMutation) RemoveGroupIDs(ids ...uuid.UUID) {
+	if m.removedgroups == nil {
+		m.removedgroups = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.groups, ids[i])
+		m.removedgroups[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedGroups returns the removed IDs of the "groups" edge to the Group entity.
+func (m *CodeMutation) RemovedGroupsIDs() (ids []uuid.UUID) {
+	for id := range m.removedgroups {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// GroupIDs returns the "group" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// GroupID instead. It exists only for internal usage by the builders.
-func (m *CodeMutation) GroupIDs() (ids []uuid.UUID) {
-	if id := m.group; id != nil {
-		ids = append(ids, *id)
+// GroupsIDs returns the "groups" edge IDs in the mutation.
+func (m *CodeMutation) GroupsIDs() (ids []uuid.UUID) {
+	for id := range m.groups {
+		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetGroup resets all changes to the "group" edge.
-func (m *CodeMutation) ResetGroup() {
-	m.group = nil
-	m.clearedgroup = false
+// ResetGroups resets all changes to the "groups" edge.
+func (m *CodeMutation) ResetGroups() {
+	m.groups = nil
+	m.clearedgroups = false
+	m.removedgroups = nil
 }
 
 // Where appends a list predicates to the CodeMutation builder.
@@ -1134,8 +1176,8 @@ func (m *CodeMutation) AddedEdges() []string {
 	if m.user != nil {
 		edges = append(edges, code.EdgeUser)
 	}
-	if m.group != nil {
-		edges = append(edges, code.EdgeGroup)
+	if m.groups != nil {
+		edges = append(edges, code.EdgeGroups)
 	}
 	return edges
 }
@@ -1148,10 +1190,12 @@ func (m *CodeMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user; id != nil {
 			return []ent.Value{*id}
 		}
-	case code.EdgeGroup:
-		if id := m.group; id != nil {
-			return []ent.Value{*id}
+	case code.EdgeGroups:
+		ids := make([]ent.Value, 0, len(m.groups))
+		for id := range m.groups {
+			ids = append(ids, id)
 		}
+		return ids
 	}
 	return nil
 }
@@ -1159,12 +1203,23 @@ func (m *CodeMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CodeMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
+	if m.removedgroups != nil {
+		edges = append(edges, code.EdgeGroups)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *CodeMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case code.EdgeGroups:
+		ids := make([]ent.Value, 0, len(m.removedgroups))
+		for id := range m.removedgroups {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
@@ -1174,8 +1229,8 @@ func (m *CodeMutation) ClearedEdges() []string {
 	if m.cleareduser {
 		edges = append(edges, code.EdgeUser)
 	}
-	if m.clearedgroup {
-		edges = append(edges, code.EdgeGroup)
+	if m.clearedgroups {
+		edges = append(edges, code.EdgeGroups)
 	}
 	return edges
 }
@@ -1186,8 +1241,8 @@ func (m *CodeMutation) EdgeCleared(name string) bool {
 	switch name {
 	case code.EdgeUser:
 		return m.cleareduser
-	case code.EdgeGroup:
-		return m.clearedgroup
+	case code.EdgeGroups:
+		return m.clearedgroups
 	}
 	return false
 }
@@ -1198,9 +1253,6 @@ func (m *CodeMutation) ClearEdge(name string) error {
 	switch name {
 	case code.EdgeUser:
 		m.ClearUser()
-		return nil
-	case code.EdgeGroup:
-		m.ClearGroup()
 		return nil
 	}
 	return fmt.Errorf("unknown Code unique edge %s", name)
@@ -1213,8 +1265,8 @@ func (m *CodeMutation) ResetEdge(name string) error {
 	case code.EdgeUser:
 		m.ResetUser()
 		return nil
-	case code.EdgeGroup:
-		m.ResetGroup()
+	case code.EdgeGroups:
+		m.ResetGroups()
 		return nil
 	}
 	return fmt.Errorf("unknown Code edge %s", name)
