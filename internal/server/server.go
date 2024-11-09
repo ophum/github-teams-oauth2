@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/gob"
 	"errors"
-	"fmt"
 	"html/template"
 	"io"
 	"log"
@@ -26,7 +25,6 @@ import (
 	"github.com/ophum/github-teams-oauth2/ent/accesstoken"
 	"github.com/ophum/github-teams-oauth2/ent/code"
 	"github.com/ophum/github-teams-oauth2/ent/group"
-	"github.com/ophum/github-teams-oauth2/ent/user"
 	"github.com/ophum/github-teams-oauth2/internal/config"
 	"golang.org/x/oauth2"
 	"gopkg.in/boj/redistore.v1"
@@ -110,18 +108,12 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	var req struct {
-		ResponseType string `query:"response_type"`
-		ClientID     string `query:"client_id"`
-		Scope        string `query:"scope"`
-		RedirectURI  string `query:"redirect_uri"`
-		State        string `query:"state"`
-	}
+	var req BeginAuthorizeRequest
 	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
 
-	if req.ResponseType != "code" {
+	if req.ResponseType != ResponseTypeCode {
 		return errors.New("invalid response_type")
 	}
 
@@ -129,11 +121,8 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid client_id'")
 	}
 
-	scopes := strings.Split(req.Scope, " ")
-	scopes = slices.DeleteFunc(scopes, func(scope string) bool {
-		return !slices.Contains([]string{
-			"openid",
-		}, scope)
+	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
+		"openid",
 	})
 
 	sess.Values["client_id"] = req.ClientID
@@ -162,20 +151,9 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	g := []string{}
-	for _, group := range groups {
-		g = append(g, group.Name)
-	}
-
-	token, ok := ctx.Get(middleware.DefaultCSRFConfig.ContextKey).(string)
-	if !ok {
-		return errors.New("failed to get csrf token from context")
-	}
-
-	return ctx.Render(http.StatusOK, "select-group", map[string]any{
-		"User":      user,
-		"Groups":    g,
-		"CSRFToken": token,
+	return render(ctx, http.StatusOK, "select-group", map[string]any{
+		"User":   user,
+		"Groups": groups,
 	})
 }
 
@@ -205,9 +183,7 @@ func (s *Server) redirectGithubOAuth2(ctx echo.Context, sess *sessions.Session) 
 }
 
 func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
-	var req struct {
-		Group string `form:"group"`
-	}
+	var req PostAuthorizeRequest
 	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
@@ -243,175 +219,50 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	group, err := user.QueryGroups().
-		Where(group.Name(req.Group)).
-		First(ctx.Request().Context())
-	if err != nil {
-		if ent.IsNotFound(err) {
-			return errors.New("invalid group")
-		}
+	if exists, err := user.QueryGroups().Where(group.ID(req.GroupID)).Exist(ctx.Request().Context()); err != nil {
 		return err
+	} else if !exists {
+		return errors.New("invalid group")
 	}
 
-	var c string
-	for {
-		c, err = randomString(40)
-		if err != nil {
-			return err
-		}
-		if exists, err := s.db.Code.Query().
-			Where(code.Code(c)).
-			Exist(ctx.Request().Context()); err != nil {
-			return err
-		} else if exists {
-			continue
-		}
-
-		if _, err := s.db.Code.Create().
-			SetGroupID(group.ID).
-			SetUserID(user.ID).
-			SetCode(c).
-			SetExpiresAt(time.Now().Add(time.Minute)).
-			SetClientID(clientID).
-			SetScope(strings.Join(scopes, " ")).
-			Save(ctx.Request().Context()); err != nil {
-			return err
-		}
-		break
+	code, err := createCode(ctx.Request().Context(), s.db,
+		user.ID,
+		req.GroupID,
+		clientID,
+		strings.Join(scopes, " "),
+	)
+	if err != nil {
+		return err
 	}
 
 	r, _ := url.Parse(redirectURI)
 	q := r.Query()
-	q.Set("code", c)
+	q.Set("code", code.Code)
 	q.Set("state", state)
 	r.RawQuery = q.Encode()
 	return ctx.Redirect(http.StatusFound, r.String())
 }
 
-func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
-	sess, err := session.Get("session", ctx)
-	if err != nil {
-		return err
-	}
-
-	var callbackParams struct {
-		Code  string `query:"code"`
-		State string `query:"state"`
-	}
-	if err := ctx.Bind(&callbackParams); err != nil {
-		return err
-	}
-
-	sessionState, ok := sess.Values["github_state_"+callbackParams.State].(map[string]string)
-	if !ok {
-		return ctx.String(http.StatusBadRequest, "invalid state")
-	}
-
-	token, err := s.oauth2Config.Exchange(ctx.Request().Context(), callbackParams.Code)
-	if err != nil {
-		return err
-	}
-
-	githubName, err := s.getGithubUser(ctx.Request().Context(), token)
-	if err != nil {
-		return err
-	}
-	email, err := s.getGithubUserEmail(ctx.Request().Context(), token)
-	if err != nil {
-		return err
-	}
-
-	orgTeams, err := s.getGithubOrgTeams(ctx.Request().Context(), token)
-	if err != nil {
-		return err
-	}
-
-	ret := []string{email}
-	for org, teams := range orgTeams {
-		for _, team := range teams {
-			ret = append(ret, fmt.Sprintf("%s:%s", org, team))
-		}
-	}
-
-	ret = slices.DeleteFunc(ret, func(v string) bool {
-		return !slices.Contains(s.config.Github.AvailableOrgTeams, v)
-	})
-	slices.Sort(ret)
-
-	user, err := s.db.User.Query().Where(user.Name(email)).First(ctx.Request().Context())
-	if err != nil {
-		if !ent.IsNotFound(err) {
-			return err
-		}
-
-		user, err = s.db.User.Create().
-			SetName(githubName).
-			SetEmail(email).
-			Save(ctx.Request().Context())
-		if err != nil {
-			return err
-		}
-	}
-
-	builders := []*ent.GroupCreate{}
-	for _, group := range ret {
-		builders = append(builders, s.db.Group.Create().SetName(group))
-	}
-	if err := s.db.Group.CreateBulk(builders...).
-		OnConflictColumns(group.FieldName).
-		DoNothing().
-		UpdateNewValues().
-		Exec(ctx.Request().Context()); err != nil {
-		return err
-	}
-
-	dgroups, err := s.db.Group.Query().Where(group.NameIn(ret...)).All(ctx.Request().Context())
-	if err != nil {
-		return err
-	}
-
-	user, err = user.Update().AddGroups(dgroups...).Save(ctx.Request().Context())
-	if err != nil {
-		return err
-	}
-
-	sess.Values["user_id"] = user.ID.String()
-	sess.Values["access_token"] = token.AccessToken
-	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
-		return err
-	}
-
-	return ctx.Redirect(http.StatusSeeOther, sessionState["return"])
-}
-
 func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
-	authzHeader := ctx.Request().Header.Get("Authorization")
-	basicUserPassword, ok := strings.CutPrefix(authzHeader, "Basic ")
-	if !ok {
-		basicUserPassword, ok = strings.CutPrefix(authzHeader, "basic ")
-		if !ok {
-			return echo.ErrUnauthorized
-		}
-	}
-
-	encoded := base64.StdEncoding.EncodeToString([]byte(
-		url.QueryEscape(s.config.Oauth2.ClientID) + ":" + url.QueryEscape(s.config.Oauth2.ClientSecret),
-	))
-	if subtle.ConstantTimeCompare([]byte(basicUserPassword), []byte(encoded)) == 0 {
+	username, password, err := getBasicUserPassword(ctx.Request().Header)
+	if err != nil {
+		log.Println(err)
 		return echo.ErrUnauthorized
 	}
 
-	var req struct {
-		GrantType   string `form:"grant_type"`
-		Code        string `form:"code"`
-		RedirectURI string `form:"redirect_uri"`
-		ClientID    string `form:"client_id"`
+	if subtle.ConstantTimeCompare([]byte(username), []byte(s.config.Oauth2.ClientID)) == 0 {
+		return echo.ErrUnauthorized
 	}
+	if subtle.ConstantTimeCompare([]byte(password), []byte(s.config.Oauth2.ClientSecret)) == 0 {
+		return echo.ErrUnauthorized
+	}
+
+	var req TokenRequest
 	if err := ctx.Bind(&req); err != nil {
 		return err
 	}
 
-	if req.GrantType != "authorization_code" {
+	if req.GrantType != GrantTypeAuthorizationCode {
 		return errors.New("invalid grant_type")
 	}
 
@@ -444,31 +295,10 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		return err
 	}
 
-	var token *ent.AccessToken
-	for {
-		t, err := randomString(20)
-		if err != nil {
-			return err
-		}
-
-		if exists, err := s.db.AccessToken.Query().
-			Where(accesstoken.Token(t)).
-			Exist(ctx.Request().Context()); err != nil {
-			return err
-		} else if exists {
-			continue
-		}
-
-		token, err = s.db.AccessToken.Create().
-			SetToken(t).
-			SetExpiresAt(time.Now().Add(time.Hour)).
-			SetUserID(user.ID).
-			SetGroupID(group.ID).
-			Save(ctx.Request().Context())
-		if err != nil {
-			return err
-		}
-		break
+	token, err := createAccessToken(ctx.Request().Context(), s.db,
+		user.ID, group.ID)
+	if err != nil {
+		return err
 	}
 
 	scopes := strings.Split(code.Scope, " ")
@@ -505,13 +335,9 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 }
 
 func (s *Server) getUserinfoHandle(ctx echo.Context) error {
-	authzHeader := ctx.Request().Header.Get("Authorization")
-	token, ok := strings.CutPrefix(authzHeader, "Bearer ")
-	if !ok {
-		token, ok = strings.CutPrefix(authzHeader, "bearer ")
-		if !ok {
-			return echo.ErrUnauthorized
-		}
+	token, err := getBearerToken(ctx.Request().Header)
+	if err != nil {
+		return echo.ErrUnauthorized
 	}
 
 	accessToken, err := s.db.AccessToken.Query().

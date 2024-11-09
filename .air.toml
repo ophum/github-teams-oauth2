@@ -6,7 +6,7 @@ tmp_dir = "tmp"
   args_bin = []
   bin = "./tmp/main --config config.yaml server"
   cmd = "go build -o ./tmp/main ."
-  delay = 0
+  delay = 1
   exclude_dir = ["assets", "tmp", "vendor", "testdata"]
   exclude_file = []
   exclude_regex = ["_test.go"]
@@ -20,7 +20,7 @@ tmp_dir = "tmp"
   log = "build-errors.log"
   rerun = false
   rerun_delay = 500
-  send_interrupt = false
+  send_interrupt = true
   stop_on_error = true
 
 [color]

@@ -11,8 +11,8 @@
 {{ range .Groups }}
 <form action="/oauth2/authorize" method="POST">
     <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
-    <input type="hidden" name="group" value="{{ . }}">
-    <button type="submit">{{ . }}</button>
+    <input type="hidden" name="group_id" value="{{ .ID }}">
+    <button type="submit">{{ .Name }}</button>
 </form>
 {{ end }}
 
