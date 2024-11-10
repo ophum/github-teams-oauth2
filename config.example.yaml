@@ -1,0 +1,26 @@
+oauth2:
+  clientID: test-client-id
+  clientSecret: test-client-secret
+  redirectURL:
+    - http://localhost:8081/oauth2/callback
+    - http://localhost:8082/oauth2/callback
+
+database:
+  type: postgres
+  dataSource: host=127.0.0.1 port=5432 user=user password=password dbname=postgres sslmode=disable
+  isDebug: true
+
+github:
+  clientID: <gh-client-id>
+  clientSecret: <gh-client-secret>
+  redirectURL: http://localhost:8080/oauth2/github/callback
+  availableOrgTeams:
+    - user@example.com
+    - <org_name>:<team_name>
+
+session:
+  redis:
+    address: localhost
+    port: 6379
+    secret: secret
+    serializer: json

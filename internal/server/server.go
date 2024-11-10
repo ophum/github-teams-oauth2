@@ -196,6 +196,16 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return errors.New("invalid client_id'")
 	}
 
+	if req.RedirectURI != "" {
+		if !slices.ContainsFunc(s.config.Oauth2.RedirectURL, func(u string) bool {
+			return strings.HasPrefix(req.RedirectURI, u)
+		}) {
+			return errors.New("invalid redirect_uri")
+		}
+	} else {
+		req.RedirectURI = s.config.Oauth2.RedirectURL[0]
+	}
+
 	user, err := getAuthUser(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, echo.ErrUnauthorized) {
@@ -255,6 +265,12 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
+	if !slices.ContainsFunc(s.config.Oauth2.RedirectURL, func(u string) bool {
+		return strings.HasPrefix(req.RedirectURI, u)
+	}) {
+		return errors.New("invalid redirect_uri")
+	}
+
 	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
 		"openid",
 		"groups",
@@ -264,12 +280,14 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 	if slices.Contains(scopes, "groups") {
 		groupIDs = req.GroupIDs
 
-		if exists, err := user.QueryGroups().
-			Where(group.IDIn(req.GroupIDs...)).
-			Exist(ctx.Request().Context()); err != nil {
-			return err
-		} else if !exists {
-			return errors.New("invalid group")
+		if len(groupIDs) > 0 {
+			if exists, err := user.QueryGroups().
+				Where(group.IDIn(req.GroupIDs...)).
+				Exist(ctx.Request().Context()); err != nil {
+				return err
+			} else if !exists {
+				return errors.New("invalid group")
+			}
 		}
 	}
 
@@ -318,6 +336,9 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 	code, err := s.db.Code.Query().Where(code.Code(hashedCode)).First(ctx.Request().Context())
 	if err != nil {
 		return err
+	}
+	if code.RedirectURI != req.RedirectURI {
+		return errors.New("invalid redirect_uri")
 	}
 
 	// ↑でBasic認証(confidential)を行っているのでclient_idを見る必要がない

@@ -18,3 +18,9 @@ curl http://localhost:8080/oauth2/token \
 TOKEN=
 curl http://localhost:8080/userinfo -H "Authorization: Bearer $TOKEN"
 ```
+
+test client
+
+```
+go run test-client/main.go 8081
+```
