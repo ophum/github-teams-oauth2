@@ -1,0 +1,29 @@
+{{define "sign-in"}}
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>github teams oauth2: sign in</title>
+</head>
+
+<body>
+    <h1>github teams oauth2: sign in</h1>
+
+    {{ if .IsAuthed }}
+    <p>認証済みです</p>
+    <form action="/sign-out" method="POST">
+        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+        <button type="submit">SignOut</button>
+    </form>
+    {{ else }}
+    <form action="/sign-in" method="POST">
+        <input type="hidden" name="_csrf" value="{{ .CSRFToken }}">
+        <input type="hidden" name="redirect_uri" value="{{ .RedirectURI }}">
+        <button type="submit">SignIn Github</button>
+    </form>
+    {{ end }}
+
+</body>
+
+</html>
+{{end}}

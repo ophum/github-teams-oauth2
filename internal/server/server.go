@@ -96,12 +96,90 @@ func (s *Server) Run() error {
 	withSession.GET("/oauth2/authorize", s.getOauth2AuthorizeHandle)
 	withSession.POST("/oauth2/authorize", s.postOauth2AuthorizeHandle)
 	withSession.GET("/oauth2/github/callback", s.getOauth2GithubCallbackHandle)
+	withSession.GET("/sign-in", s.getSignIn)
+	withSession.POST("/sign-in", s.postSignIn)
+	withSession.POST("/sign-out", s.postSignOut)
 
 	e.POST("/oauth2/token", s.postOauth2TokenHandle)
 	e.GET("/userinfo", s.getUserinfoHandle)
 
 	e.Logger.Fatal(e.Start(":8080"))
 	return nil
+}
+
+func (s *Server) getSignIn(ctx echo.Context) error {
+	sess, err := session.Get("session", ctx)
+	if err != nil {
+		return err
+	}
+	_, isAuthed := sess.Values["user_id"].(string)
+
+	if !isAuthed {
+		sess.Options = &sessions.Options{
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false,
+		}
+		if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
+			return err
+		}
+	}
+	redirectURI := ctx.QueryParam("redirect_uri")
+	return render(ctx, http.StatusOK, "sign-in", map[string]any{
+		"RedirectURI": redirectURI,
+		"IsAuthed":    isAuthed,
+	})
+}
+
+func (s *Server) postSignIn(ctx echo.Context) error {
+	sess, err := session.Get("session", ctx)
+	if err != nil {
+		return err
+	}
+
+	redirectURI := ctx.FormValue("redirect_uri")
+	if redirectURI == "" {
+		redirectURI = "/sign-in"
+	}
+
+	state, err := randomString(32)
+	if err != nil {
+		return err
+	}
+	sess.Values["github_state_"+state] = map[string]string{
+		"return": redirectURI,
+	}
+
+	sess.Options = &sessions.Options{
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   false,
+	}
+	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
+		return err
+	}
+
+	url := s.oauth2Config.AuthCodeURL(state)
+
+	return ctx.Redirect(http.StatusFound, url)
+}
+
+func (s *Server) postSignOut(ctx echo.Context) error {
+	sess, err := session.Get("session", ctx)
+	if err != nil {
+		return err
+	}
+
+	sess.Options = &sessions.Options{
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+	}
+	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
+		return err
+	}
+
+	return ctx.Redirect(http.StatusFound, "/sign-in")
 }
 
 func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
@@ -156,28 +234,13 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 }
 
 func (s *Server) redirectGithubOAuth2(ctx echo.Context, sess *sessions.Session) error {
-	state, err := randomString(32)
-	if err != nil {
-		return err
-	}
+	q := url.Values{}
+	q.Set("redirect_uri", ctx.Request().RequestURI)
 
-	sess.Values["github_state_"+state] = map[string]string{
-		"return": ctx.Request().URL.String(),
-	}
+	signInURL, _ := url.Parse("/sign-in")
+	signInURL.RawQuery = q.Encode()
 
-	sess.Options = &sessions.Options{
-		Path:     "/",
-		HttpOnly: true,
-		//TODO: true when production
-		Secure: false,
-	}
-	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
-		return err
-	}
-
-	url := s.oauth2Config.AuthCodeURL(state)
-
-	return ctx.Redirect(http.StatusFound, url)
+	return ctx.Redirect(http.StatusFound, signInURL.String())
 }
 
 func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
