@@ -183,11 +183,6 @@ func (s *Server) postSignOut(ctx echo.Context) error {
 }
 
 func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
-	sess, err := session.Get("session", ctx)
-	if err != nil {
-		return err
-	}
-
 	var req BeginAuthorizeRequest
 	if err := ctx.Bind(&req); err != nil {
 		return err
@@ -205,7 +200,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	if err != nil {
 		if errors.Is(err, echo.ErrUnauthorized) {
 			log.Println("unauthorized, redirect sign-in page")
-			return s.redirectSignInPage(ctx, sess)
+			return s.redirectSignInPage(ctx)
 		}
 		return err
 	}
@@ -233,7 +228,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	})
 }
 
-func (s *Server) redirectSignInPage(ctx echo.Context, sess *sessions.Session) error {
+func (s *Server) redirectSignInPage(ctx echo.Context) error {
 	q := url.Values{}
 	q.Set("redirect_uri", ctx.Request().RequestURI)
 
