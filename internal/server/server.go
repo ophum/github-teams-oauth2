@@ -204,8 +204,8 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	user, err := getAuthUser(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, echo.ErrUnauthorized) {
-			log.Println("unauthorized, begin github oauth")
-			return s.redirectGithubOAuth2(ctx, sess)
+			log.Println("unauthorized, redirect sign-in page")
+			return s.redirectSignInPage(ctx, sess)
 		}
 		return err
 	}
@@ -233,7 +233,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	})
 }
 
-func (s *Server) redirectGithubOAuth2(ctx echo.Context, sess *sessions.Session) error {
+func (s *Server) redirectSignInPage(ctx echo.Context, sess *sessions.Session) error {
 	q := url.Values{}
 	q.Set("redirect_uri", ctx.Request().RequestURI)
 
