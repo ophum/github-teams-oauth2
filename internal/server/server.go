@@ -147,28 +147,11 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		}
 	}
 
-	requestID, err := randomString(16)
-	if err != nil {
-		return err
-	}
-
-	if v, ok := sess.Values["authorize_requests"].(map[string]BeginAuthorizeRequest); !ok {
-		sess.Values["authorize_requests"] = map[string]BeginAuthorizeRequest{
-			requestID: req,
-		}
-	} else {
-		v[requestID] = req
-		sess.Values["authorize_requests"] = v
-	}
-	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
-		return err
-	}
-
 	return render(ctx, http.StatusOK, "select-group", map[string]any{
-		"User":      user,
-		"Groups":    groups,
-		"RequestID": requestID,
-		"IsGroups":  isGroups,
+		"User":                  user,
+		"Groups":                groups,
+		"IsGroups":              isGroups,
+		"BeginAuthorizeRequest": req,
 	})
 }
 
@@ -208,28 +191,13 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	authorizeRequests, ok := sess.Values["authorize_requests"].(map[string]BeginAuthorizeRequest)
-	if !ok {
-		return errors.New("authz req not found in session")
-	}
-	beginReq, ok := authorizeRequests[req.RequestID]
-	if !ok {
-		return errors.New("begin req not found int session")
-	}
-
-	delete(authorizeRequests, req.RequestID)
-	sess.Values["authorize_requests"] = authorizeRequests
-	if err := sess.Save(ctx.Request(), ctx.Response()); err != nil {
-		return err
-	}
-
 	userID := sess.Values["user_id"].(string)
 	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
 	if err != nil {
 		return err
 	}
 
-	scopes := excludeInvalidScopes(strings.Split(beginReq.Scope, " "), []string{
+	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
 		"openid",
 		"groups",
 	})
@@ -250,17 +218,17 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 	_, originalCode, err := createCode(ctx.Request().Context(), s.db,
 		user.ID,
 		groupIDs,
-		beginReq.ClientID,
+		req.ClientID,
 		strings.Join(scopes, " "),
 	)
 	if err != nil {
 		return err
 	}
 
-	r, _ := url.Parse(beginReq.RedirectURI)
+	r, _ := url.Parse(req.RedirectURI)
 	q := r.Query()
 	q.Set("code", originalCode)
-	q.Set("state", beginReq.State)
+	q.Set("state", req.State)
 	r.RawQuery = q.Encode()
 	return ctx.Redirect(http.StatusFound, r.String())
 }

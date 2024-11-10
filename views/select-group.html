@@ -11,7 +11,10 @@
 
 <form action="/oauth2/authorize" method="POST">
     <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
-    <input type="hidden" name="request_id" value="{{ .RequestID }}">
+    <input type="hidden" name="client_id" value="{{ $.BeginAuthorizeRequest.ClientID }}">
+    <input type="hidden" name="scope" value="{{ $.BeginAuthorizeRequest.Scope }}">
+    <input type="hidden" name="redirect_uri" value="{{ $.BeginAuthorizeRequest.RedirectURI }}">
+    <input type="hidden" name="state" value="{{ $.BeginAuthorizeRequest.State }}">
     {{ if .IsGroups }}
     {{ range .Groups }}
     <div>
