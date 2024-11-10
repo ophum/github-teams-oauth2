@@ -3,7 +3,9 @@ package server
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha512"
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"log"
 	"math/big"
@@ -51,28 +53,37 @@ func excludeInvalidScopes(scopes, validScopes []string) []string {
 	})
 }
 
-func createCode(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID, clientID, scope string) (*ent.Code, error) {
+func sha512String(v string) string {
+	vv := sha512.Sum512([]byte(v))
+	return hex.EncodeToString(vv[:])
+}
+func createCode(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID, clientID, scope string) (*ent.Code, string, error) {
 	for {
 		c, err := randomString(40)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
+		hashedCode := sha512String(c)
 		if exists, err := db.Code.Query().
-			Where(code.Code(c)).
+			Where(code.Code(hashedCode)).
 			Exist(ctx); err != nil {
-			return nil, err
+			return nil, "", err
 		} else if exists {
 			continue
 		}
 
-		return db.Code.Create().
+		cc, err := db.Code.Create().
 			AddGroupIDs(groupIDs...).
 			SetUserID(userID).
-			SetCode(c).
+			SetCode(hashedCode).
 			SetExpiresAt(time.Now().Add(time.Minute)).
 			SetClientID(clientID).
 			SetScope(scope).
 			Save(ctx)
+		if err != nil {
+			return nil, "", err
+		}
+		return cc, c, nil
 	}
 }
 
@@ -121,27 +132,32 @@ func getBearerToken(header http.Header) (string, error) {
 	return right, nil
 }
 
-func createAccessToken(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID) (*ent.AccessToken, error) {
+func createAccessToken(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID) (*ent.AccessToken, string, error) {
 	for {
 		t, err := randomString(20)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 
+		hashed := sha512String(t)
 		if exists, err := db.AccessToken.Query().
-			Where(accesstoken.Token(t)).
+			Where(accesstoken.Token(hashed)).
 			Exist(ctx); err != nil {
-			return nil, err
+			return nil, "", err
 		} else if exists {
 			continue
 		}
 
-		return db.AccessToken.Create().
-			SetToken(t).
+		tt, err := db.AccessToken.Create().
+			SetToken(hashed).
 			SetExpiresAt(time.Now().Add(time.Hour)).
 			SetUserID(userID).
 			AddGroupIDs(groupIDs...).
 			Save(ctx)
+		if err != nil {
+			return nil, "", err
+		}
+		return tt, t, nil
 	}
 }
 

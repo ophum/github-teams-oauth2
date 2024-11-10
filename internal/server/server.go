@@ -247,7 +247,7 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		}
 	}
 
-	code, err := createCode(ctx.Request().Context(), s.db,
+	_, originalCode, err := createCode(ctx.Request().Context(), s.db,
 		user.ID,
 		groupIDs,
 		beginReq.ClientID,
@@ -259,7 +259,7 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 
 	r, _ := url.Parse(beginReq.RedirectURI)
 	q := r.Query()
-	q.Set("code", code.Code)
+	q.Set("code", originalCode)
 	q.Set("state", beginReq.State)
 	r.RawQuery = q.Encode()
 	return ctx.Redirect(http.StatusFound, r.String())
@@ -288,7 +288,8 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		return errors.New("invalid grant_type")
 	}
 
-	code, err := s.db.Code.Query().Where(code.Code(req.Code)).First(ctx.Request().Context())
+	hashedCode := sha512String(req.Code)
+	code, err := s.db.Code.Query().Where(code.Code(hashedCode)).First(ctx.Request().Context())
 	if err != nil {
 		return err
 	}
@@ -317,7 +318,7 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		return err
 	}
 
-	token, err := createAccessToken(ctx.Request().Context(), s.db,
+	_, token, err := createAccessToken(ctx.Request().Context(), s.db,
 		user.ID, slicesMap(groups, func(v *ent.Group) uuid.UUID {
 			return v.ID
 		}))
@@ -328,14 +329,14 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 	scopes := strings.Split(code.Scope, " ")
 
 	ret := map[string]any{
-		"access_token":  token.Token,
+		"access_token":  token,
 		"token_type":    "bearer",
 		"expires_in":    3600,
 		"refresh_token": "",
 	}
 
 	if slices.Contains(scopes, "openid") {
-		hash := sha256.Sum256([]byte(token.Token))
+		hash := sha256.Sum256([]byte(token))
 		atHash := base64.StdEncoding.EncodeToString(hash[:16])
 		claims := jwt.MapClaims{
 			"iss":      "http://localhost:8080",
@@ -368,8 +369,9 @@ func (s *Server) getUserinfoHandle(ctx echo.Context) error {
 		return echo.ErrUnauthorized
 	}
 
+	hashedToken := sha512String(token)
 	accessToken, err := s.db.AccessToken.Query().
-		Where(accesstoken.Token(token)).
+		Where(accesstoken.Token(hashedToken)).
 		First(ctx.Request().Context())
 	if err != nil {
 		return err
