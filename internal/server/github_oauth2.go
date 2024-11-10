@@ -62,7 +62,7 @@ func (s *Server) getOauth2GithubCallbackHandle(ctx echo.Context) error {
 	})
 	slices.Sort(ret)
 
-	user, err := s.db.User.Query().Where(user.Name(email)).First(ctx.Request().Context())
+	user, err := s.db.User.Query().Where(user.Name(githubName)).First(ctx.Request().Context())
 	if err != nil {
 		if !ent.IsNotFound(err) {
 			return err
