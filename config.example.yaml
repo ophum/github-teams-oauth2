@@ -1,4 +1,5 @@
 oauth2:
+  clientType: confidential # or public
   clientID: test-client-id
   clientSecret: test-client-secret
   redirectURL:

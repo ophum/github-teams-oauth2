@@ -21,6 +21,8 @@ const (
 	FieldScope = "scope"
 	// FieldRedirectURI holds the string denoting the redirect_uri field in the database.
 	FieldRedirectURI = "redirect_uri"
+	// FieldCodeChallenge holds the string denoting the code_challenge field in the database.
+	FieldCodeChallenge = "code_challenge"
 	// FieldExpiresAt holds the string denoting the expires_at field in the database.
 	FieldExpiresAt = "expires_at"
 	// EdgeUser holds the string denoting the user edge name in mutations.
@@ -50,6 +52,7 @@ var Columns = []string{
 	FieldClientID,
 	FieldScope,
 	FieldRedirectURI,
+	FieldCodeChallenge,
 	FieldExpiresAt,
 }
 
@@ -87,6 +90,8 @@ var (
 	DefaultScope string
 	// DefaultRedirectURI holds the default value on creation for the "redirect_uri" field.
 	DefaultRedirectURI string
+	// DefaultCodeChallenge holds the default value on creation for the "code_challenge" field.
+	DefaultCodeChallenge string
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -117,6 +122,11 @@ func ByScope(opts ...sql.OrderTermOption) OrderOption {
 // ByRedirectURI orders the results by the redirect_uri field.
 func ByRedirectURI(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldRedirectURI, opts...).ToFunc()
+}
+
+// ByCodeChallenge orders the results by the code_challenge field.
+func ByCodeChallenge(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCodeChallenge, opts...).ToFunc()
 }
 
 // ByExpiresAt orders the results by the expires_at field.

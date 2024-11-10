@@ -20,6 +20,7 @@ func (Code) Fields() []ent.Field {
 		field.String("client_id").Default(""),
 		field.String("scope").Default(""),
 		field.String("redirect_uri").Default(""),
+		field.String("code_challenge").Default(""),
 		field.Time("expires_at"),
 	}
 }

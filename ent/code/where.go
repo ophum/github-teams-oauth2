@@ -76,6 +76,11 @@ func RedirectURI(v string) predicate.Code {
 	return predicate.Code(sql.FieldEQ(FieldRedirectURI, v))
 }
 
+// CodeChallenge applies equality check predicate on the "code_challenge" field. It's identical to CodeChallengeEQ.
+func CodeChallenge(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldCodeChallenge, v))
+}
+
 // ExpiresAt applies equality check predicate on the "expires_at" field. It's identical to ExpiresAtEQ.
 func ExpiresAt(v time.Time) predicate.Code {
 	return predicate.Code(sql.FieldEQ(FieldExpiresAt, v))
@@ -339,6 +344,71 @@ func RedirectURIEqualFold(v string) predicate.Code {
 // RedirectURIContainsFold applies the ContainsFold predicate on the "redirect_uri" field.
 func RedirectURIContainsFold(v string) predicate.Code {
 	return predicate.Code(sql.FieldContainsFold(FieldRedirectURI, v))
+}
+
+// CodeChallengeEQ applies the EQ predicate on the "code_challenge" field.
+func CodeChallengeEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldEQ(FieldCodeChallenge, v))
+}
+
+// CodeChallengeNEQ applies the NEQ predicate on the "code_challenge" field.
+func CodeChallengeNEQ(v string) predicate.Code {
+	return predicate.Code(sql.FieldNEQ(FieldCodeChallenge, v))
+}
+
+// CodeChallengeIn applies the In predicate on the "code_challenge" field.
+func CodeChallengeIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldIn(FieldCodeChallenge, vs...))
+}
+
+// CodeChallengeNotIn applies the NotIn predicate on the "code_challenge" field.
+func CodeChallengeNotIn(vs ...string) predicate.Code {
+	return predicate.Code(sql.FieldNotIn(FieldCodeChallenge, vs...))
+}
+
+// CodeChallengeGT applies the GT predicate on the "code_challenge" field.
+func CodeChallengeGT(v string) predicate.Code {
+	return predicate.Code(sql.FieldGT(FieldCodeChallenge, v))
+}
+
+// CodeChallengeGTE applies the GTE predicate on the "code_challenge" field.
+func CodeChallengeGTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldGTE(FieldCodeChallenge, v))
+}
+
+// CodeChallengeLT applies the LT predicate on the "code_challenge" field.
+func CodeChallengeLT(v string) predicate.Code {
+	return predicate.Code(sql.FieldLT(FieldCodeChallenge, v))
+}
+
+// CodeChallengeLTE applies the LTE predicate on the "code_challenge" field.
+func CodeChallengeLTE(v string) predicate.Code {
+	return predicate.Code(sql.FieldLTE(FieldCodeChallenge, v))
+}
+
+// CodeChallengeContains applies the Contains predicate on the "code_challenge" field.
+func CodeChallengeContains(v string) predicate.Code {
+	return predicate.Code(sql.FieldContains(FieldCodeChallenge, v))
+}
+
+// CodeChallengeHasPrefix applies the HasPrefix predicate on the "code_challenge" field.
+func CodeChallengeHasPrefix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasPrefix(FieldCodeChallenge, v))
+}
+
+// CodeChallengeHasSuffix applies the HasSuffix predicate on the "code_challenge" field.
+func CodeChallengeHasSuffix(v string) predicate.Code {
+	return predicate.Code(sql.FieldHasSuffix(FieldCodeChallenge, v))
+}
+
+// CodeChallengeEqualFold applies the EqualFold predicate on the "code_challenge" field.
+func CodeChallengeEqualFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldEqualFold(FieldCodeChallenge, v))
+}
+
+// CodeChallengeContainsFold applies the ContainsFold predicate on the "code_challenge" field.
+func CodeChallengeContainsFold(v string) predicate.Code {
+	return predicate.Code(sql.FieldContainsFold(FieldCodeChallenge, v))
 }
 
 // ExpiresAtEQ applies the EQ predicate on the "expires_at" field.

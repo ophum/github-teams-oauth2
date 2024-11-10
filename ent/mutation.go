@@ -575,23 +575,24 @@ func (m *AccessTokenMutation) ResetEdge(name string) error {
 // CodeMutation represents an operation that mutates the Code nodes in the graph.
 type CodeMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	code          *string
-	client_id     *string
-	scope         *string
-	redirect_uri  *string
-	expires_at    *time.Time
-	clearedFields map[string]struct{}
-	user          *uuid.UUID
-	cleareduser   bool
-	groups        map[uuid.UUID]struct{}
-	removedgroups map[uuid.UUID]struct{}
-	clearedgroups bool
-	done          bool
-	oldValue      func(context.Context) (*Code, error)
-	predicates    []predicate.Code
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	code           *string
+	client_id      *string
+	scope          *string
+	redirect_uri   *string
+	code_challenge *string
+	expires_at     *time.Time
+	clearedFields  map[string]struct{}
+	user           *uuid.UUID
+	cleareduser    bool
+	groups         map[uuid.UUID]struct{}
+	removedgroups  map[uuid.UUID]struct{}
+	clearedgroups  bool
+	done           bool
+	oldValue       func(context.Context) (*Code, error)
+	predicates     []predicate.Code
 }
 
 var _ ent.Mutation = (*CodeMutation)(nil)
@@ -842,6 +843,42 @@ func (m *CodeMutation) ResetRedirectURI() {
 	m.redirect_uri = nil
 }
 
+// SetCodeChallenge sets the "code_challenge" field.
+func (m *CodeMutation) SetCodeChallenge(s string) {
+	m.code_challenge = &s
+}
+
+// CodeChallenge returns the value of the "code_challenge" field in the mutation.
+func (m *CodeMutation) CodeChallenge() (r string, exists bool) {
+	v := m.code_challenge
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCodeChallenge returns the old "code_challenge" field's value of the Code entity.
+// If the Code object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CodeMutation) OldCodeChallenge(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCodeChallenge is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCodeChallenge requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCodeChallenge: %w", err)
+	}
+	return oldValue.CodeChallenge, nil
+}
+
+// ResetCodeChallenge resets all changes to the "code_challenge" field.
+func (m *CodeMutation) ResetCodeChallenge() {
+	m.code_challenge = nil
+}
+
 // SetExpiresAt sets the "expires_at" field.
 func (m *CodeMutation) SetExpiresAt(t time.Time) {
 	m.expires_at = &t
@@ -1005,7 +1042,7 @@ func (m *CodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CodeMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
 	if m.code != nil {
 		fields = append(fields, code.FieldCode)
 	}
@@ -1017,6 +1054,9 @@ func (m *CodeMutation) Fields() []string {
 	}
 	if m.redirect_uri != nil {
 		fields = append(fields, code.FieldRedirectURI)
+	}
+	if m.code_challenge != nil {
+		fields = append(fields, code.FieldCodeChallenge)
 	}
 	if m.expires_at != nil {
 		fields = append(fields, code.FieldExpiresAt)
@@ -1037,6 +1077,8 @@ func (m *CodeMutation) Field(name string) (ent.Value, bool) {
 		return m.Scope()
 	case code.FieldRedirectURI:
 		return m.RedirectURI()
+	case code.FieldCodeChallenge:
+		return m.CodeChallenge()
 	case code.FieldExpiresAt:
 		return m.ExpiresAt()
 	}
@@ -1056,6 +1098,8 @@ func (m *CodeMutation) OldField(ctx context.Context, name string) (ent.Value, er
 		return m.OldScope(ctx)
 	case code.FieldRedirectURI:
 		return m.OldRedirectURI(ctx)
+	case code.FieldCodeChallenge:
+		return m.OldCodeChallenge(ctx)
 	case code.FieldExpiresAt:
 		return m.OldExpiresAt(ctx)
 	}
@@ -1094,6 +1138,13 @@ func (m *CodeMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetRedirectURI(v)
+		return nil
+	case code.FieldCodeChallenge:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCodeChallenge(v)
 		return nil
 	case code.FieldExpiresAt:
 		v, ok := value.(time.Time)
@@ -1162,6 +1213,9 @@ func (m *CodeMutation) ResetField(name string) error {
 		return nil
 	case code.FieldRedirectURI:
 		m.ResetRedirectURI()
+		return nil
+	case code.FieldCodeChallenge:
+		m.ResetCodeChallenge()
 		return nil
 	case code.FieldExpiresAt:
 		m.ResetExpiresAt()

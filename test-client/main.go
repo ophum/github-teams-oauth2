@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +20,10 @@ func main() {
 		port = os.Args[1]
 	}
 
+	var isPublic bool
+	flag.BoolVar(&isPublic, "public", false, "public client")
+	flag.Parse()
+
 	conf := oauth2.Config{
 		ClientID:     "test-client-id",
 		ClientSecret: "test-client-secret",
@@ -33,8 +38,20 @@ func main() {
 		},
 	}
 
+	if isPublic {
+		conf.ClientSecret = ""
+	}
+
+	verifier := oauth2.GenerateVerifier()
+	log.Println("verifier:", verifier)
+
 	state := uuid.Must(uuid.NewRandom())
-	url := conf.AuthCodeURL(state.String())
+
+	opts := []oauth2.AuthCodeOption{}
+	if isPublic {
+		opts = append(opts, oauth2.S256ChallengeOption(verifier))
+	}
+	url := conf.AuthCodeURL(state.String(), opts...)
 	fmt.Println("url:", url)
 
 	doneCh := make(chan struct{})
@@ -49,7 +66,17 @@ func main() {
 			log.Fatal("mismatch state")
 		}
 
-		token, err := conf.Exchange(r.Context(), code, oauth2.SetAuthURLParam("client_id", conf.ClientID))
+		opts := []oauth2.AuthCodeOption{}
+		if isPublic {
+			opts = append(opts, []oauth2.AuthCodeOption{
+				oauth2.SetAuthURLParam("client_id", conf.ClientID),
+				oauth2.VerifierOption(verifier),
+			}...)
+		}
+		token, err := conf.Exchange(r.Context(),
+			code,
+			opts...,
+		)
 		if err != nil {
 			log.Fatal(err)
 		}

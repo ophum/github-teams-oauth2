@@ -87,6 +87,20 @@ func (cu *CodeUpdate) SetNillableRedirectURI(s *string) *CodeUpdate {
 	return cu
 }
 
+// SetCodeChallenge sets the "code_challenge" field.
+func (cu *CodeUpdate) SetCodeChallenge(s string) *CodeUpdate {
+	cu.mutation.SetCodeChallenge(s)
+	return cu
+}
+
+// SetNillableCodeChallenge sets the "code_challenge" field if the given value is not nil.
+func (cu *CodeUpdate) SetNillableCodeChallenge(s *string) *CodeUpdate {
+	if s != nil {
+		cu.SetCodeChallenge(*s)
+	}
+	return cu
+}
+
 // SetExpiresAt sets the "expires_at" field.
 func (cu *CodeUpdate) SetExpiresAt(t time.Time) *CodeUpdate {
 	cu.mutation.SetExpiresAt(t)
@@ -214,6 +228,9 @@ func (cu *CodeUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := cu.mutation.RedirectURI(); ok {
 		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
+	}
+	if value, ok := cu.mutation.CodeChallenge(); ok {
+		_spec.SetField(code.FieldCodeChallenge, field.TypeString, value)
 	}
 	if value, ok := cu.mutation.ExpiresAt(); ok {
 		_spec.SetField(code.FieldExpiresAt, field.TypeTime, value)
@@ -364,6 +381,20 @@ func (cuo *CodeUpdateOne) SetRedirectURI(s string) *CodeUpdateOne {
 func (cuo *CodeUpdateOne) SetNillableRedirectURI(s *string) *CodeUpdateOne {
 	if s != nil {
 		cuo.SetRedirectURI(*s)
+	}
+	return cuo
+}
+
+// SetCodeChallenge sets the "code_challenge" field.
+func (cuo *CodeUpdateOne) SetCodeChallenge(s string) *CodeUpdateOne {
+	cuo.mutation.SetCodeChallenge(s)
+	return cuo
+}
+
+// SetNillableCodeChallenge sets the "code_challenge" field if the given value is not nil.
+func (cuo *CodeUpdateOne) SetNillableCodeChallenge(s *string) *CodeUpdateOne {
+	if s != nil {
+		cuo.SetCodeChallenge(*s)
 	}
 	return cuo
 }
@@ -525,6 +556,9 @@ func (cuo *CodeUpdateOne) sqlSave(ctx context.Context) (_node *Code, err error) 
 	}
 	if value, ok := cuo.mutation.RedirectURI(); ok {
 		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.CodeChallenge(); ok {
+		_spec.SetField(code.FieldCodeChallenge, field.TypeString, value)
 	}
 	if value, ok := cuo.mutation.ExpiresAt(); ok {
 		_spec.SetField(code.FieldExpiresAt, field.TypeTime, value)

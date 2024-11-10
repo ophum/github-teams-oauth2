@@ -27,6 +27,8 @@ type Code struct {
 	Scope string `json:"scope,omitempty"`
 	// RedirectURI holds the value of the "redirect_uri" field.
 	RedirectURI string `json:"redirect_uri,omitempty"`
+	// CodeChallenge holds the value of the "code_challenge" field.
+	CodeChallenge string `json:"code_challenge,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
 	ExpiresAt time.Time `json:"expires_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -72,7 +74,7 @@ func (*Code) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case code.FieldCode, code.FieldClientID, code.FieldScope, code.FieldRedirectURI:
+		case code.FieldCode, code.FieldClientID, code.FieldScope, code.FieldRedirectURI, code.FieldCodeChallenge:
 			values[i] = new(sql.NullString)
 		case code.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
@@ -124,6 +126,12 @@ func (c *Code) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field redirect_uri", values[i])
 			} else if value.Valid {
 				c.RedirectURI = value.String
+			}
+		case code.FieldCodeChallenge:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field code_challenge", values[i])
+			} else if value.Valid {
+				c.CodeChallenge = value.String
 			}
 		case code.FieldExpiresAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -195,6 +203,9 @@ func (c *Code) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("redirect_uri=")
 	builder.WriteString(c.RedirectURI)
+	builder.WriteString(", ")
+	builder.WriteString("code_challenge=")
+	builder.WriteString(c.CodeChallenge)
 	builder.WriteString(", ")
 	builder.WriteString("expires_at=")
 	builder.WriteString(c.ExpiresAt.Format(time.ANSIC))

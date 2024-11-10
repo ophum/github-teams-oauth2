@@ -74,6 +74,20 @@ func (cc *CodeCreate) SetNillableRedirectURI(s *string) *CodeCreate {
 	return cc
 }
 
+// SetCodeChallenge sets the "code_challenge" field.
+func (cc *CodeCreate) SetCodeChallenge(s string) *CodeCreate {
+	cc.mutation.SetCodeChallenge(s)
+	return cc
+}
+
+// SetNillableCodeChallenge sets the "code_challenge" field if the given value is not nil.
+func (cc *CodeCreate) SetNillableCodeChallenge(s *string) *CodeCreate {
+	if s != nil {
+		cc.SetCodeChallenge(*s)
+	}
+	return cc
+}
+
 // SetExpiresAt sets the "expires_at" field.
 func (cc *CodeCreate) SetExpiresAt(t time.Time) *CodeCreate {
 	cc.mutation.SetExpiresAt(t)
@@ -175,6 +189,10 @@ func (cc *CodeCreate) defaults() {
 		v := code.DefaultRedirectURI
 		cc.mutation.SetRedirectURI(v)
 	}
+	if _, ok := cc.mutation.CodeChallenge(); !ok {
+		v := code.DefaultCodeChallenge
+		cc.mutation.SetCodeChallenge(v)
+	}
 	if _, ok := cc.mutation.ID(); !ok {
 		v := code.DefaultID()
 		cc.mutation.SetID(v)
@@ -194,6 +212,9 @@ func (cc *CodeCreate) check() error {
 	}
 	if _, ok := cc.mutation.RedirectURI(); !ok {
 		return &ValidationError{Name: "redirect_uri", err: errors.New(`ent: missing required field "Code.redirect_uri"`)}
+	}
+	if _, ok := cc.mutation.CodeChallenge(); !ok {
+		return &ValidationError{Name: "code_challenge", err: errors.New(`ent: missing required field "Code.code_challenge"`)}
 	}
 	if _, ok := cc.mutation.ExpiresAt(); !ok {
 		return &ValidationError{Name: "expires_at", err: errors.New(`ent: missing required field "Code.expires_at"`)}
@@ -249,6 +270,10 @@ func (cc *CodeCreate) createSpec() (*Code, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.RedirectURI(); ok {
 		_spec.SetField(code.FieldRedirectURI, field.TypeString, value)
 		_node.RedirectURI = value
+	}
+	if value, ok := cc.mutation.CodeChallenge(); ok {
+		_spec.SetField(code.FieldCodeChallenge, field.TypeString, value)
+		_node.CodeChallenge = value
 	}
 	if value, ok := cc.mutation.ExpiresAt(); ok {
 		_spec.SetField(code.FieldExpiresAt, field.TypeTime, value)
@@ -387,6 +412,18 @@ func (u *CodeUpsert) UpdateRedirectURI() *CodeUpsert {
 	return u
 }
 
+// SetCodeChallenge sets the "code_challenge" field.
+func (u *CodeUpsert) SetCodeChallenge(v string) *CodeUpsert {
+	u.Set(code.FieldCodeChallenge, v)
+	return u
+}
+
+// UpdateCodeChallenge sets the "code_challenge" field to the value that was provided on create.
+func (u *CodeUpsert) UpdateCodeChallenge() *CodeUpsert {
+	u.SetExcluded(code.FieldCodeChallenge)
+	return u
+}
+
 // SetExpiresAt sets the "expires_at" field.
 func (u *CodeUpsert) SetExpiresAt(v time.Time) *CodeUpsert {
 	u.Set(code.FieldExpiresAt, v)
@@ -500,6 +537,20 @@ func (u *CodeUpsertOne) SetRedirectURI(v string) *CodeUpsertOne {
 func (u *CodeUpsertOne) UpdateRedirectURI() *CodeUpsertOne {
 	return u.Update(func(s *CodeUpsert) {
 		s.UpdateRedirectURI()
+	})
+}
+
+// SetCodeChallenge sets the "code_challenge" field.
+func (u *CodeUpsertOne) SetCodeChallenge(v string) *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetCodeChallenge(v)
+	})
+}
+
+// UpdateCodeChallenge sets the "code_challenge" field to the value that was provided on create.
+func (u *CodeUpsertOne) UpdateCodeChallenge() *CodeUpsertOne {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateCodeChallenge()
 	})
 }
 
@@ -785,6 +836,20 @@ func (u *CodeUpsertBulk) SetRedirectURI(v string) *CodeUpsertBulk {
 func (u *CodeUpsertBulk) UpdateRedirectURI() *CodeUpsertBulk {
 	return u.Update(func(s *CodeUpsert) {
 		s.UpdateRedirectURI()
+	})
+}
+
+// SetCodeChallenge sets the "code_challenge" field.
+func (u *CodeUpsertBulk) SetCodeChallenge(v string) *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.SetCodeChallenge(v)
+	})
+}
+
+// UpdateCodeChallenge sets the "code_challenge" field to the value that was provided on create.
+func (u *CodeUpsertBulk) UpdateCodeChallenge() *CodeUpsertBulk {
+	return u.Update(func(s *CodeUpsert) {
+		s.UpdateCodeChallenge()
 	})
 }
 

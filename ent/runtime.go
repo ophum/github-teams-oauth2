@@ -35,6 +35,10 @@ func init() {
 	codeDescRedirectURI := codeFields[4].Descriptor()
 	// code.DefaultRedirectURI holds the default value on creation for the redirect_uri field.
 	code.DefaultRedirectURI = codeDescRedirectURI.Default.(string)
+	// codeDescCodeChallenge is the schema descriptor for code_challenge field.
+	codeDescCodeChallenge := codeFields[5].Descriptor()
+	// code.DefaultCodeChallenge holds the default value on creation for the code_challenge field.
+	code.DefaultCodeChallenge = codeDescCodeChallenge.Default.(string)
 	// codeDescID is the schema descriptor for id field.
 	codeDescID := codeFields[0].Descriptor()
 	// code.DefaultID holds the default value on creation for the id field.

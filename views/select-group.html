@@ -15,6 +15,7 @@
     <input type="hidden" name="scope" value="{{ $.BeginAuthorizeRequest.Scope }}">
     <input type="hidden" name="redirect_uri" value="{{ $.BeginAuthorizeRequest.RedirectURI }}">
     <input type="hidden" name="state" value="{{ $.BeginAuthorizeRequest.State }}">
+    <input type="hidden" name="code_challenge" value="{{ $.BeginAuthorizeRequest.CodeChallenge }}">
     {{ if .IsGroups }}
     {{ range .Groups }}
     <div>

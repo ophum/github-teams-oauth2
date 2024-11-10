@@ -23,6 +23,7 @@ func (c *Config) SetDefault() {
 }
 
 type Oauth2 struct {
+	ClientType   string   `yaml:"clientType"`
 	ClientID     string   `yaml:"clientID"`
 	ClientSecret string   `yaml:"clientSecret"`
 	RedirectURL  []string `yaml:"redirectURL"`

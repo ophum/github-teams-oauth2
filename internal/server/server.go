@@ -296,6 +296,7 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		groupIDs,
 		req.ClientID,
 		strings.Join(scopes, " "),
+		req.CodeChallenge,
 	)
 	if err != nil {
 		return err
@@ -310,17 +311,19 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 }
 
 func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
-	username, password, err := getBasicUserPassword(ctx.Request().Header)
-	if err != nil {
-		log.Println(err)
-		return echo.ErrUnauthorized
-	}
+	if s.config.Oauth2.ClientType == "confidential" {
+		username, password, err := getBasicUserPassword(ctx.Request().Header)
+		if err != nil {
+			log.Println(err)
+			return echo.ErrUnauthorized
+		}
 
-	if subtle.ConstantTimeCompare([]byte(username), []byte(s.config.Oauth2.ClientID)) == 0 {
-		return echo.ErrUnauthorized
-	}
-	if subtle.ConstantTimeCompare([]byte(password), []byte(s.config.Oauth2.ClientSecret)) == 0 {
-		return echo.ErrUnauthorized
+		if subtle.ConstantTimeCompare([]byte(username), []byte(s.config.Oauth2.ClientID)) == 0 {
+			return echo.ErrUnauthorized
+		}
+		if subtle.ConstantTimeCompare([]byte(password), []byte(s.config.Oauth2.ClientSecret)) == 0 {
+			return echo.ErrUnauthorized
+		}
 	}
 
 	var req TokenRequest
@@ -337,8 +340,14 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 	if err != nil {
 		return err
 	}
-	if code.RedirectURI != req.RedirectURI {
-		return errors.New("invalid redirect_uri")
+
+	if code.CodeChallenge != "" {
+		challenge := oauth2.S256ChallengeFromVerifier(req.CodeVerifier)
+		if code.CodeChallenge != challenge {
+			log.Println("code_challenge:", code.CodeChallenge)
+			log.Println("challenge:", challenge)
+			return errors.New("invalid code_verifier")
+		}
 	}
 
 	// ↑でBasic認証(confidential)を行っているのでclient_idを見る必要がない
@@ -348,7 +357,7 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 	//}
 
 	if code.RedirectURI != "" && code.RedirectURI == req.RedirectURI {
-		return errors.New("invalid redirect_uri")
+		return errors.New("invalid redirect_uri: " + req.RedirectURI)
 	}
 
 	if code.ExpiresAt.Before(time.Now()) {

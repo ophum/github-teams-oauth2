@@ -36,6 +36,7 @@ var (
 		{Name: "client_id", Type: field.TypeString, Default: ""},
 		{Name: "scope", Type: field.TypeString, Default: ""},
 		{Name: "redirect_uri", Type: field.TypeString, Default: ""},
+		{Name: "code_challenge", Type: field.TypeString, Default: ""},
 		{Name: "expires_at", Type: field.TypeTime},
 		{Name: "user_codes", Type: field.TypeUUID, Nullable: true},
 	}
@@ -47,7 +48,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "codes_users_codes",
-				Columns:    []*schema.Column{CodesColumns[6]},
+				Columns:    []*schema.Column{CodesColumns[7]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

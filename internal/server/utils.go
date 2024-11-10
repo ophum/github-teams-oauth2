@@ -57,7 +57,7 @@ func sha512String(v string) string {
 	vv := sha512.Sum512([]byte(v))
 	return hex.EncodeToString(vv[:])
 }
-func createCode(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID, clientID, scope string) (*ent.Code, string, error) {
+func createCode(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs []uuid.UUID, clientID, scope, codeChallenge string) (*ent.Code, string, error) {
 	for {
 		c, err := randomString(40)
 		if err != nil {
@@ -79,6 +79,7 @@ func createCode(ctx context.Context, db *ent.Client, userID uuid.UUID, groupIDs 
 			SetExpiresAt(time.Now().Add(time.Minute)).
 			SetClientID(clientID).
 			SetScope(scope).
+			SetCodeChallenge(codeChallenge).
 			Save(ctx)
 		if err != nil {
 			return nil, "", err
