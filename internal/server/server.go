@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
@@ -11,6 +12,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
+	"os/signal"
 	"slices"
 	"strings"
 	"time"
@@ -102,7 +105,30 @@ func (s *Server) Run() error {
 	e.POST("/oauth2/token", s.postOauth2TokenHandle)
 	e.GET("/userinfo", s.getUserinfoHandle)
 
-	e.Logger.Fatal(e.Start(":8080"))
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	go func() {
+		if err := e.Start(":8080"); err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				return
+			}
+			e.Logger.Fatal("shutting down the server")
+		}
+	}()
+
+	<-ctx.Done()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		return err
+	}
+	if err := s.Shutdown(); err != nil {
+		return err
+	}
+	log.Println("shutdown...")
 	return nil
 }
 
