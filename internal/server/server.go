@@ -349,11 +349,9 @@ func (s *Server) postOauth2TokenHandle(ctx echo.Context) error {
 		}
 	}
 
-	// ↑でBasic認証(confidential)を行っているのでclient_idを見る必要がない
-	// 逆にBasic認証を不要とする場合(public)は見る必要がある
-	//if code.ClientID != req.ClientID {
-	//	return errors.New("invalid client_id")
-	//}
+	if s.config.Oauth2.ClientType == "public" && code.ClientID != req.ClientID {
+		return errors.New("invalid client_id")
+	}
 
 	if code.RedirectURI != "" && code.RedirectURI == req.RedirectURI {
 		return errors.New("invalid redirect_uri: " + req.RedirectURI)

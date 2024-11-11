@@ -19,6 +19,7 @@ type Config struct {
 }
 
 func (c *Config) SetDefault() {
+	c.Oauth2.setDefault()
 	c.Github.setDefault()
 }
 
@@ -27,6 +28,10 @@ type Oauth2 struct {
 	ClientID     string   `yaml:"clientID"`
 	ClientSecret string   `yaml:"clientSecret"`
 	RedirectURL  []string `yaml:"redirectURL"`
+}
+
+func (o *Oauth2) setDefault() {
+	o.ClientType = "confidential"
 }
 
 type Github struct {
