@@ -190,3 +190,33 @@ func getAuthUser(ctx echo.Context, db *ent.Client) (*ent.User, error) {
 	}
 	return user, nil
 }
+
+func validateRedirectURI(redirectURI string, validURIs []string) (*url.URL, error) {
+	if len(validURIs) == 0 {
+		if redirectURI == "" {
+			return nil, errors.New("empty redirect_uri")
+		}
+		return url.Parse(redirectURI)
+	}
+
+	if len(validURIs) == 1 {
+		if redirectURI == "" {
+			return url.Parse(validURIs[0])
+		}
+	}
+
+	if slices.ContainsFunc(validURIs, func(u string) bool {
+		return strings.HasPrefix(redirectURI, u)
+	}) {
+		return url.Parse(redirectURI)
+	}
+	return nil, errors.New("mismatch redirect_uri")
+}
+
+func authorizeErrorRedirect(ctx echo.Context, uri *url.URL, errorCode, state string) error {
+	q := uri.Query()
+	q.Set("error", errorCode)
+	q.Set("state", state)
+	uri.RawQuery = q.Encode()
+	return ctx.Redirect(http.StatusFound, uri.String())
+}

@@ -29,6 +29,8 @@ import (
 	"github.com/ophum/github-teams-oauth2/internal/config"
 	"golang.org/x/oauth2"
 	"gopkg.in/boj/redistore.v1"
+
+	echolog "github.com/labstack/gommon/log"
 )
 
 func init() {
@@ -88,6 +90,7 @@ func (s *Server) Run() error {
 	e := echo.New()
 	e.Renderer = t
 	e.Use(middleware.Logger())
+	e.Logger.SetLevel(echolog.INFO)
 
 	withSession := e.Group("",
 		session.Middleware(s.sessionStore),
@@ -137,22 +140,21 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	if req.ResponseType != ResponseTypeCode {
-		return errors.New("invalid response_type")
-	}
-
 	if req.ClientID != s.config.Oauth2.ClientID {
-		return errors.New("invalid client_id'")
+		ctx.Logger().Info("invalid client_id")
+		return echo.ErrBadRequest
 	}
 
-	if req.RedirectURI != "" {
-		if !slices.ContainsFunc(s.config.Oauth2.RedirectURL, func(u string) bool {
-			return strings.HasPrefix(req.RedirectURI, u)
-		}) {
-			return errors.New("invalid redirect_uri")
-		}
-	} else {
-		req.RedirectURI = s.config.Oauth2.RedirectURL[0]
+	redirectURI, err := validateRedirectURI(req.RedirectURI, s.config.Oauth2.RedirectURL)
+	if err != nil {
+		ctx.Logger().Info("invalid redirect_uri, ", err)
+		return echo.ErrBadRequest
+	}
+	req.RedirectURI = redirectURI.String()
+
+	if req.ResponseType != ResponseTypeCode {
+		ctx.Logger().Info("invalid response_type")
+		return authorizeErrorRedirect(ctx, redirectURI, "unsupported_response_type", req.State)
 	}
 
 	user, err := getAuthUser(ctx, s.db)
@@ -161,7 +163,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 			log.Println("unauthorized, redirect sign-in page")
 			return s.redirectSignInPage(ctx)
 		}
-		return err
+		return authorizeErrorRedirect(ctx, redirectURI, "server_error", req.State)
 	}
 
 	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
@@ -175,7 +177,7 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 	if isGroups {
 		groups, err = user.QueryGroups().All(ctx.Request().Context())
 		if err != nil {
-			return err
+			return authorizeErrorRedirect(ctx, redirectURI, "server_error", req.State)
 		}
 	}
 
