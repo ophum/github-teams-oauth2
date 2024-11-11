@@ -70,7 +70,7 @@ func New(conf *config.Config) (*Server, error) {
 		config:       conf,
 		sessionStore: store,
 		oauth2Config: conf.Github.OAuth2Config(),
-		secret:       "secret", // FIXME
+		secret:       conf.HmacSecret,
 	}, nil
 }
 

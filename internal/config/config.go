@@ -12,10 +12,11 @@ import (
 )
 
 type Config struct {
-	Oauth2   Oauth2   `yaml:"oauth2"`
-	Github   Github   `yaml:"github"`
-	Database Database `yaml:"database"`
-	Session  Session  `yaml:"session"`
+	HmacSecret string   `yaml:"hmacSecret"`
+	Oauth2     Oauth2   `yaml:"oauth2"`
+	Github     Github   `yaml:"github"`
+	Database   Database `yaml:"database"`
+	Session    Session  `yaml:"session"`
 }
 
 func (c *Config) SetDefault() {

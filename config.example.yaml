@@ -1,3 +1,5 @@
+# openssl rand -hex 100 | head -c 64
+hmacSecret: a4013abf31a6dabd154c95fb93e4c2f4b2f8338107bf0ad1c20eba396f685661
 oauth2:
   clientType: confidential # or public
   clientID: test-client-id
