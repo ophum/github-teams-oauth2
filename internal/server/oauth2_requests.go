@@ -19,12 +19,15 @@ type BeginAuthorizeRequest struct {
 }
 
 type PostAuthorizeRequest struct {
-	ClientID      string      `form:"client_id"`
-	Scope         string      `form:"scope"`
-	RedirectURI   string      `form:"redirect_uri"`
-	State         string      `form:"state"`
-	CodeChallenge string      `form:"code_challenge"`
-	GroupIDs      []uuid.UUID `form:"group_ids[]"`
+	ResponseType        ResponseType `form:"response_type"`
+	ClientID            string       `form:"client_id"`
+	Scope               string       `form:"scope"`
+	RedirectURI         string       `form:"redirect_uri"`
+	State               string       `form:"state"`
+	CodeChallenge       string       `form:"code_challenge"`
+	CodeChallengeMethod string       `form:"code_challenge_method"`
+	GroupIDs            []uuid.UUID  `form:"group_ids[]"`
+	Sig                 string       `form:"sig"`
 }
 
 type GrantType string

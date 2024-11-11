@@ -2,10 +2,14 @@ package server
 
 import (
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/sha512"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"log"
 	"math/big"
@@ -219,4 +223,30 @@ func authorizeErrorRedirect(ctx echo.Context, uri *url.URL, errorCode, state str
 	q.Set("state", state)
 	uri.RawQuery = q.Encode()
 	return ctx.Redirect(http.StatusFound, uri.String())
+}
+
+func hmacSign(v any, secret string) (string, error) {
+	message, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+
+	mac := hmac.New(sha256.New, []byte(secret))
+	if _, err := mac.Write(message); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(mac.Sum(nil)), nil
+}
+
+func hmacVerify(sig string, v any, secret string) error {
+	sig2, err := hmacSign(v, secret)
+	if err != nil {
+		return err
+	}
+
+	if subtle.ConstantTimeCompare([]byte(sig), []byte(sig2)) == 0 {
+		return errors.New("invalid signature")
+	}
+	return nil
 }

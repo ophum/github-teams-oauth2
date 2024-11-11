@@ -52,6 +52,7 @@ type Server struct {
 	config       *config.Config
 	sessionStore *redistore.RediStore
 	oauth2Config *oauth2.Config
+	secret       string
 }
 
 func New(conf *config.Config) (*Server, error) {
@@ -69,6 +70,7 @@ func New(conf *config.Config) (*Server, error) {
 		config:       conf,
 		sessionStore: store,
 		oauth2Config: conf.Github.OAuth2Config(),
+		secret:       "secret", // FIXME
 	}, nil
 }
 
@@ -181,11 +183,28 @@ func (s *Server) getOauth2AuthorizeHandle(ctx echo.Context) error {
 		}
 	}
 
+	// NOTE: select-group.htmlのformが改ざんされていないことを
+	// 検証できるようにするためhmacで署名を作成する
+	// 改ざんされていなければ、このハンドラーで行ったBeginAuthorizeRequestの
+	// バリデーションがpostOauth2AuthorizeHandleでも有効となる
+	sig, err := hmacSign([]any{
+		req.ResponseType,
+		req.ClientID,
+		req.Scope,
+		req.RedirectURI,
+		req.State,
+		req.CodeChallenge,
+		req.CodeChallengeMethod,
+	}, s.secret)
+	if err != nil {
+		return authorizeErrorRedirect(ctx, redirectURI, "server_error", req.State)
+	}
 	return render(ctx, http.StatusOK, "select-group", map[string]any{
-		"User":                  user,
-		"Groups":                groups,
-		"IsGroups":              isGroups,
-		"BeginAuthorizeRequest": req,
+		"User":                           user,
+		"Groups":                         groups,
+		"IsGroups":                       isGroups,
+		"BeginAuthorizeRequest":          req,
+		"BeginAuthorizeRequestSignature": sig,
 	})
 }
 
@@ -205,21 +224,24 @@ func (s *Server) postOauth2AuthorizeHandle(ctx echo.Context) error {
 		return err
 	}
 
-	sess, err := session.Get("session", ctx)
-	if err != nil {
+	// NOTE: 署名が正しければformのhidden inputが改ざんされていない。
+	// 改ざんされていなければgetOauth2AuthorizeHandleで行ったバリデーションが
+	// このハンドラーでも有効となる
+	if err := hmacVerify(req.Sig, []any{
+		req.ResponseType,
+		req.ClientID,
+		req.Scope,
+		req.RedirectURI,
+		req.State,
+		req.CodeChallenge,
+		req.CodeChallengeMethod,
+	}, s.secret); err != nil {
 		return err
 	}
 
-	userID := sess.Values["user_id"].(string)
-	user, err := s.db.User.Get(ctx.Request().Context(), uuid.MustParse(userID))
+	user, err := getAuthUser(ctx, s.db)
 	if err != nil {
 		return err
-	}
-
-	if !slices.ContainsFunc(s.config.Oauth2.RedirectURL, func(u string) bool {
-		return strings.HasPrefix(req.RedirectURI, u)
-	}) {
-		return errors.New("invalid redirect_uri")
 	}
 
 	scopes := excludeInvalidScopes(strings.Split(req.Scope, " "), []string{
