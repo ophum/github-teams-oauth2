@@ -5,32 +5,35 @@
     <meta charset="utf-8" />
     <title>github teams oauth2: select group</title>
 </head>
-<h1>github teams oauth2: select group</h1>
 
-<p>{{ .User.Name }}でログインしています。</p>
+<body>
+    <h1>github teams oauth2: select group</h1>
 
-<form action="/oauth2/authorize" method="POST">
-    <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
-    <input type="hidden" name="response_type" value="{{ $.BeginAuthorizeRequest.ResponseType }}">
-    <input type="hidden" name="client_id" value="{{ $.BeginAuthorizeRequest.ClientID }}">
-    <input type="hidden" name="scope" value="{{ $.BeginAuthorizeRequest.Scope }}">
-    <input type="hidden" name="redirect_uri" value="{{ $.BeginAuthorizeRequest.RedirectURI }}">
-    <input type="hidden" name="state" value="{{ $.BeginAuthorizeRequest.State }}">
-    <input type="hidden" name="code_challenge" value="{{ $.BeginAuthorizeRequest.CodeChallenge }}">
-    <input type="hidden" name="code_challenge_method" value="{{ $.BeginAuthorizeRequest.CodeChallengeMethod }}">
-    <input type="hidden" name="sig" value="{{ $.BeginAuthorizeRequestSignature }}">
-    {{ if .IsGroups }}
-    {{ range .Groups }}
-    <div>
-        <label>
-            <input type="checkbox" name="group_ids[]" value="{{ .ID }}">
-            {{ .Name }}
-        </label>
-    </div>
-    {{ end }}
-    {{ end }}
-    <button type="submit">認可</button>
-</form>
+    <p>{{ .User.Name }}でログインしています。</p>
+
+    <form action="/oauth2/authorize" method="POST">
+        <input type="hidden" name="_csrf" value="{{ $.CSRFToken }}">
+        <input type="hidden" name="response_type" value="{{ $.BeginAuthorizeRequest.ResponseType }}">
+        <input type="hidden" name="client_id" value="{{ $.BeginAuthorizeRequest.ClientID }}">
+        <input type="hidden" name="scope" value="{{ $.BeginAuthorizeRequest.Scope }}">
+        <input type="hidden" name="redirect_uri" value="{{ $.BeginAuthorizeRequest.RedirectURI }}">
+        <input type="hidden" name="state" value="{{ $.BeginAuthorizeRequest.State }}">
+        <input type="hidden" name="code_challenge" value="{{ $.BeginAuthorizeRequest.CodeChallenge }}">
+        <input type="hidden" name="code_challenge_method" value="{{ $.BeginAuthorizeRequest.CodeChallengeMethod }}">
+        <input type="hidden" name="sig" value="{{ $.BeginAuthorizeRequestSignature }}">
+        {{ if .IsGroups }}
+        {{ range .Groups }}
+        <div>
+            <label>
+                <input type="checkbox" name="group_ids[]" value="{{ .ID }}">
+                {{ .Name }}
+            </label>
+        </div>
+        {{ end }}
+        {{ end }}
+        <button type="submit">認可</button>
+    </form>
+</body>
 
 </html>
 {{end}}
